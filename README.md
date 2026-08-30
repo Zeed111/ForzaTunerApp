@@ -35,6 +35,8 @@ ForzaTunerApp/
 ├── tsconfig.json       # TypeScript configuration
 └── package.json        # Dependencies and build scripts
 ```
+---
+
 🚀 Getting Started
 Prerequisites
 Node.js (v20 LTS recommended)
@@ -63,6 +65,8 @@ Scan the QR code displayed in the terminal with the Expo Go app (Android) or Cam
 
 Or press a to open in an Android emulator.
 
+---
+
 🔨 Local Standalone Build (Android APK)
 To compile a standalone .apk locally using Gradle without cloud queues:
 
@@ -79,6 +83,8 @@ Output APK will be located at:
 
 Plaintext
 android/app/build/outputs/apk/release/app-release.apk
+
+---
 
 📄 License
 This project is licensed under the MIT License.
