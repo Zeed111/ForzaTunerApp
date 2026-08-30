@@ -34,6 +34,7 @@ ForzaTunerApp/
 ├── eas.json            # EAS build profiles (Local standalone APK/AAB)
 ├── tsconfig.json       # TypeScript configuration
 └── package.json        # Dependencies and build scripts
+```
 🚀 Getting Started
 Prerequisites
 Node.js (v20 LTS recommended)
@@ -78,14 +79,10 @@ Output APK will be located at:
 
 Plaintext
 android/app/build/outputs/apk/release/app-release.apk
+
 📄 License
 This project is licensed under the MIT License.
 
 
----
 
-### How to Add It to Your Repo:
 
-1. Click the green **`Add a README`** button shown on your GitHub screen.
-2. Paste the markdown content above into the editor.
-3. Click the green **`Commit changes...`** button in the top right to save it.
