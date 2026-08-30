@@ -25,6 +25,7 @@ import {
   EngineType,
 } from './src/tuningEngine';
 import { GearingChart } from './src/components/GearingChart';
+import { CarSelectorModal } from './src/components/CarSelectorModal';
 
 const DEFAULT_INPUTS: VehicleInputs = {
   units: 'metric',
@@ -61,6 +62,7 @@ const DEFAULT_INPUTS: VehicleInputs = {
 export default function App() {
   const [inputs, setInputs] = useState<VehicleInputs>(DEFAULT_INPUTS);
   const [tune, setTune] = useState<TuneResult>(() => calculateTune(DEFAULT_INPUTS));
+  const [carModalVisible, setCarModalVisible] = useState(false);
   const [presetModalVisible, setPresetModalVisible] = useState(false);
   const [presetNameInput, setPresetNameInput] = useState('');
   const [savedPresets, setSavedPresets] = useState<{ [key: string]: VehicleInputs }>({});
@@ -185,6 +187,12 @@ export default function App() {
             </TouchableOpacity>
           </View>
           <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.presetBtn, { backgroundColor: '#1a2f4c', borderColor: '#2b5080' }]}
+              onPress={() => setCarModalVisible(true)}
+            >
+              <Text style={[styles.presetBtnText, { color: '#00e5ff' }]}>Cars</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.presetBtn} onPress={() => setPresetModalVisible(true)}>
               <Text style={styles.presetBtnText}>Garage</Text>
             </TouchableOpacity>
@@ -611,6 +619,14 @@ export default function App() {
             units={inputs.units}
           />
         </View>
+
+        {/* CAR SELECTOR MODAL */}
+        <CarSelectorModal
+          visible={carModalVisible}
+          onClose={() => setCarModalVisible(false)}
+          onSelectCar={(specs: Partial<VehicleInputs>) => setInputs(prev => ({ ...prev, ...specs }))}
+          units={inputs.units}
+        />
 
         {/* GARAGE PRESET MODAL */}
         <Modal visible={presetModalVisible} animationType="slide" transparent>
