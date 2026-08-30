@@ -1,0 +1,24 @@
+# Dependencies & local tooling
+node_modules/
+.expo/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Large source files & build scripts not needed by the app bundle
+*.xlsx
+*.csv
+convertExcel.js
+scrapeRealSpecs.js
+fixCarDatabase.js
+scrape*.js
+
+# Local build artifacts
+*.apk
+*.aab
+build-*/
+
+# Native intermediate caches
+android/.gradle/
+android/app/build/
+android/build/

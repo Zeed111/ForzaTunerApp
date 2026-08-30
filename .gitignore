@@ -39,3 +39,29 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+
+# Node / Expo / EAS
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Local Build Artifacts
+*.apk
+*.aab
+build-*/
+
+# Spreadsheets & Converter Tooling
+*.xlsx
+*.csv
+convertExcel.js
+scrapeRealSpecs.js
+fixCarDatabase.js
+
+# Local environment & system files
+.env*.local
+.DS_Store
+Thumbs.db
+
+eas.json
