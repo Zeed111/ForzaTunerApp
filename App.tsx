@@ -11,6 +11,7 @@ import {
   Platform,
   Modal,
   FlatList,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,6 +27,9 @@ import {
 } from './src/tuningEngine';
 import { GearingChart } from './src/components/GearingChart';
 import { CarSelectorModal } from './src/components/CarSelectorModal';
+import { NumericInput } from './src/components/NumericInput';
+import { convertInputsUnitSystem, psToHp, hpToPs } from './src/utils/units';
+import { t } from './src/i18n';
 
 const DEFAULT_INPUTS: VehicleInputs = {
   units: 'metric',
@@ -34,7 +38,7 @@ const DEFAULT_INPUTS: VehicleInputs = {
   drivetrain: 'RWD',
   hp: 650,
   weight: 1280,
-  frontWeightPct: 53,
+  frontWeightPct: 53.0,
   tWidthF: 245,
   tProfileF: 40,
   tRimF: 18,
@@ -59,100 +63,141 @@ const DEFAULT_INPUTS: VehicleInputs = {
   engineType: 'balanced',
 };
 
+export interface PresetItem {
+  id: string;
+  name: string;
+  inputs: VehicleInputs;
+}
+
 export default function App() {
   const [inputs, setInputs] = useState<VehicleInputs>(DEFAULT_INPUTS);
   const [tune, setTune] = useState<TuneResult>(() => calculateTune(DEFAULT_INPUTS));
+  const [isHydrated, setIsHydrated] = useState(false);
   const [carModalVisible, setCarModalVisible] = useState(false);
   const [presetModalVisible, setPresetModalVisible] = useState(false);
   const [presetNameInput, setPresetNameInput] = useState('');
-  const [savedPresets, setSavedPresets] = useState<{ [key: string]: VehicleInputs }>({});
+  const [savedPresets, setSavedPresets] = useState<PresetItem[]>([]);
+  const [powerUnit, setPowerUnit] = useState<'hp' | 'ps'>('hp');
 
   useEffect(() => {
-    loadSavedState();
-    loadPresetsFromStorage();
+    const initStorage = async () => {
+      try {
+        const [savedState, savedPresetsData] = await Promise.all([
+          AsyncStorage.getItem('fh_tuner_app_state'),
+          AsyncStorage.getItem('fh_tuner_presets'),
+        ]);
+
+        if (savedState) {
+          const parsed = JSON.parse(savedState);
+          setInputs({ ...DEFAULT_INPUTS, ...parsed });
+        }
+        if (savedPresetsData) {
+          const parsed = JSON.parse(savedPresetsData);
+          if (Array.isArray(parsed)) {
+            setSavedPresets(parsed);
+          } else if (typeof parsed === 'object' && parsed !== null) {
+            const migrated: PresetItem[] = Object.entries(parsed)
+              .filter(([k]) => k !== '__proto__' && k !== 'constructor' && k !== 'prototype')
+              .map(([k, val]) => ({ id: k, name: k, inputs: val as VehicleInputs }));
+            setSavedPresets(migrated);
+          }
+        }
+      } catch (e) {
+        console.error('Storage initialization failed', e);
+      } finally {
+        setIsHydrated(true);
+      }
+    };
+
+    initStorage();
   }, []);
 
   useEffect(() => {
     setTune(calculateTune(inputs));
-    AsyncStorage.setItem('fh_tuner_app_state', JSON.stringify(inputs)).catch(console.error);
-  }, [inputs]);
-
-  const loadSavedState = async () => {
-    try {
-      const data = await AsyncStorage.getItem('fh_tuner_app_state');
-      if (data) setInputs(JSON.parse(data));
-    } catch (e) {
-      console.error(e);
+    if (isHydrated) {
+      AsyncStorage.setItem('fh_tuner_app_state', JSON.stringify(inputs)).catch(console.error);
     }
-  };
+  }, [inputs, isHydrated]);
 
-  const loadPresetsFromStorage = async () => {
-    try {
-      const data = await AsyncStorage.getItem('fh_tuner_presets');
-      if (data) setSavedPresets(JSON.parse(data));
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const updateNumeric = (key: keyof VehicleInputs, val: string) => {
-    const num = parseFloat(val) || 0;
-    setInputs(prev => ({ ...prev, [key]: num }));
+  const updateNumeric = (key: keyof VehicleInputs, val: number) => {
+    setInputs(prev => ({ ...prev, [key]: val }));
   };
 
   const toggleUnits = (system: UnitSystem) => {
     if (inputs.units === system) return;
-    const isImp = system === 'imperial';
-    setInputs(prev => ({
-      ...prev,
-      units: system,
-      weight: isImp ? Math.round(prev.weight * 2.20462) : Math.round(prev.weight / 2.20462),
-      springFrontMin: isImp ? +(prev.springFrontMin * 55.997).toFixed(1) : +(prev.springFrontMin / 55.997).toFixed(1),
-      springFrontMax: isImp ? +(prev.springFrontMax * 55.997).toFixed(1) : +(prev.springFrontMax / 55.997).toFixed(1),
-      springRearMin: isImp ? +(prev.springRearMin * 55.997).toFixed(1) : +(prev.springRearMin / 55.997).toFixed(1),
-      springRearMax: isImp ? +(prev.springRearMax * 55.997).toFixed(1) : +(prev.springRearMax / 55.997).toFixed(1),
-      heightFrontMin: isImp ? +(prev.heightFrontMin / 2.54).toFixed(1) : +(prev.heightFrontMin * 2.54).toFixed(1),
-      heightFrontMax: isImp ? +(prev.heightFrontMax / 2.54).toFixed(1) : +(prev.heightFrontMax * 2.54).toFixed(1),
-      heightRearMin: isImp ? +(prev.heightRearMin / 2.54).toFixed(1) : +(prev.heightRearMin * 2.54).toFixed(1),
-      heightRearMax: isImp ? +(prev.heightRearMax / 2.54).toFixed(1) : +(prev.heightRearMax * 2.54).toFixed(1),
-      aeroFrontMin: isImp ? Math.round(prev.aeroFrontMin * 2.20462) : Math.round(prev.aeroFrontMin / 2.20462),
-      aeroFrontMax: isImp ? Math.round(prev.aeroFrontMax * 2.20462) : Math.round(prev.aeroFrontMax / 2.20462),
-      aeroRearMin: isImp ? Math.round(prev.aeroRearMin * 2.20462) : Math.round(prev.aeroRearMin / 2.20462),
-      aeroRearMax: isImp ? Math.round(prev.aeroRearMax * 2.20462) : Math.round(prev.aeroRearMax / 2.20462),
-      topSpeed: isImp ? Math.round(prev.topSpeed / 1.60934) : Math.round(prev.topSpeed * 1.60934),
-    }));
+    setInputs(prev => convertInputsUnitSystem(prev, system));
   };
 
   const handleSavePreset = async () => {
-    if (!presetNameInput.trim()) {
-      Alert.alert('Error', 'Please enter a preset name');
+    const trimmed = presetNameInput.trim();
+    if (!trimmed) {
+      Alert.alert(t('errorTitle'), t('enterPresetNameMsg'));
       return;
     }
-    const updated = { ...savedPresets, [presetNameInput.trim()]: inputs };
+    if (trimmed === '__proto__' || trimmed === 'constructor' || trimmed === 'prototype') {
+      Alert.alert(t('errorTitle'), t('invalidPresetNameMsg'));
+      return;
+    }
+
+    const existingIndex = savedPresets.findIndex(
+      p => p.name.toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (existingIndex >= 0) {
+      Alert.alert(
+        t('overwritePresetTitle'),
+        t('overwritePresetConfirm', { name: trimmed }),
+        [
+          { text: t('cancel'), style: 'cancel' },
+          {
+            text: t('overwrite'),
+            style: 'destructive',
+            onPress: async () => {
+              const updated = savedPresets.map((item, index) =>
+                index === existingIndex ? { id: trimmed, name: trimmed, inputs } : item
+              );
+              setSavedPresets(updated);
+              await AsyncStorage.setItem('fh_tuner_presets', JSON.stringify(updated));
+              setPresetNameInput('');
+              Alert.alert(t('presetSavedTitle'), t('presetUpdatedMsg', { name: trimmed }));
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    const updated: PresetItem[] = [...savedPresets, { id: trimmed, name: trimmed, inputs }];
     setSavedPresets(updated);
     await AsyncStorage.setItem('fh_tuner_presets', JSON.stringify(updated));
     setPresetNameInput('');
-    Alert.alert('Saved', `Preset "${presetNameInput.trim()}" saved!`);
+    Alert.alert(t('presetSavedTitle'), t('presetSavedMsg', { name: trimmed }));
   };
 
-  const handleLoadPreset = (name: string) => {
-    if (savedPresets[name]) {
-      setInputs(savedPresets[name]);
-      setPresetModalVisible(false);
-    }
+  const handleLoadPreset = (preset: PresetItem) => {
+    setInputs({ ...DEFAULT_INPUTS, ...preset.inputs });
+    setPresetModalVisible(false);
   };
 
-  const handleDeletePreset = async (name: string) => {
-    const updated = { ...savedPresets };
-    delete updated[name];
-    setSavedPresets(updated);
-    await AsyncStorage.setItem('fh_tuner_presets', JSON.stringify(updated));
+  const handleDeletePreset = (preset: PresetItem) => {
+    Alert.alert(t('deletePresetTitle'), t('deletePresetConfirm', { name: preset.name }), [
+      { text: t('cancel'), style: 'cancel' },
+      {
+        text: t('delete'),
+        style: 'destructive',
+        onPress: async () => {
+          const updated = savedPresets.filter(p => p.id !== preset.id);
+          setSavedPresets(updated);
+          await AsyncStorage.setItem('fh_tuner_presets', JSON.stringify(updated));
+        },
+      },
+    ]);
   };
 
   const handleReset = () => {
-    Alert.alert('Reset Defaults', 'Reset all tuning values to default?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', style: 'destructive', onPress: () => setInputs(DEFAULT_INPUTS) },
+    Alert.alert(t('resetDefaultsTitle'), t('resetDefaultsConfirm'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('reset'), style: 'destructive', onPress: () => setInputs(DEFAULT_INPUTS) },
     ]);
   };
 
@@ -164,10 +209,14 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0d14" translucent={false} />
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
-          <Text style={styles.title}>FORZA <Text style={styles.titleAccent}>PRO TUNER</Text></Text>
-          <Text style={styles.subtitle}>Mobile Telemetry & Precision Suspension Calculator</Text>
+          <Text style={styles.title}>{t('forza')}<Text style={styles.titleAccent}>{t('proTuner')}</Text></Text>
+          <Text style={styles.subtitle}>{t('subtitle')}</Text>
         </View>
 
         {/* Top Controls */}
@@ -177,13 +226,13 @@ export default function App() {
               style={[styles.pillBtn, inputs.units === 'metric' && styles.pillActive]}
               onPress={() => toggleUnits('metric')}
             >
-              <Text style={[styles.pillText, inputs.units === 'metric' && styles.pillTextActive]}>Metric</Text>
+              <Text style={[styles.pillText, inputs.units === 'metric' && styles.pillTextActive]}>{t('metric')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.pillBtn, inputs.units === 'imperial' && styles.pillActive]}
               onPress={() => toggleUnits('imperial')}
             >
-              <Text style={[styles.pillText, inputs.units === 'imperial' && styles.pillTextActive]}>Imperial</Text>
+              <Text style={[styles.pillText, inputs.units === 'imperial' && styles.pillTextActive]}>{t('imperial')}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.actionRow}>
@@ -191,28 +240,28 @@ export default function App() {
               style={[styles.presetBtn, { backgroundColor: '#1a2f4c', borderColor: '#2b5080' }]}
               onPress={() => setCarModalVisible(true)}
             >
-              <Text style={[styles.presetBtnText, { color: '#00e5ff' }]}>Cars</Text>
+              <Text style={[styles.presetBtnText, { color: '#00e5ff' }]}>{t('cars')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.presetBtn} onPress={() => setPresetModalVisible(true)}>
-              <Text style={styles.presetBtnText}>Garage</Text>
+              <Text style={styles.presetBtnText}>{t('garage')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.resetBtn} onPress={handleReset}>
-              <Text style={styles.resetBtnText}>Reset</Text>
+              <Text style={styles.resetBtnText}>{t('reset')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* 1. CHASSIS & POWER */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>1. Chassis & Power</Text>
+          <Text style={styles.cardTitle}>{t('chassisAndPower')}</Text>
 
-          <Text style={styles.label}>Car Category</Text>
+          <Text style={styles.label}>{t('carCategory')}</Text>
           <View style={styles.pillGroupFull}>
             {([
-              { key: 'jdm', label: 'JDM / Tuner' },
-              { key: 'track', label: 'GT / Track' },
-              { key: 'classic', label: 'Classic / Muscle' },
-              { key: 'supercar', label: 'Supercar' },
+              { key: 'jdm', label: t('jdmLabel') },
+              { key: 'track', label: t('trackLabel') },
+              { key: 'classic', label: t('classicLabel') },
+              { key: 'supercar', label: t('supercarLabel') },
             ] as { key: CarCategory; label: string }[]).map(c => (
               <TouchableOpacity
                 key={c.key}
@@ -224,7 +273,7 @@ export default function App() {
             ))}
           </View>
 
-          <Text style={styles.label}>Discipline / Surface</Text>
+          <Text style={styles.label}>{t('disciplineSurface')}</Text>
           <View style={styles.pillGroupFull}>
             {(['drift', 'grip', 'dirt', 'offroad', 'drag'] as Discipline[]).map(d => (
               <TouchableOpacity
@@ -237,7 +286,7 @@ export default function App() {
             ))}
           </View>
 
-          <Text style={styles.label}>Drivetrain</Text>
+          <Text style={styles.label}>{t('drivetrain')}</Text>
           <View style={styles.pillGroupFull}>
             {(['RWD', 'AWD', 'FWD'] as Drivetrain[]).map(dt => (
               <TouchableOpacity
@@ -252,30 +301,50 @@ export default function App() {
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Text style={styles.label}>Horsepower (HP)</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={String(inputs.hp)}
-                onChangeText={v => updateNumeric('hp', v)}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={styles.label}>{t('power')}</Text>
+                <View style={{ flexDirection: 'row', backgroundColor: '#0b0e17', borderRadius: 4, padding: 1, borderWidth: 1, borderColor: '#232b3b' }}>
+                  <TouchableOpacity
+                    style={[{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }, powerUnit === 'hp' && { backgroundColor: '#00e5ff' }]}
+                    onPress={() => setPowerUnit('hp')}
+                  >
+                    <Text style={[{ fontSize: 9, fontWeight: '700', color: '#8b9bb4' }, powerUnit === 'hp' && { color: '#0a0d14' }]}>{t('hpUnit')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }, powerUnit === 'ps' && { backgroundColor: '#00e5ff' }]}
+                    onPress={() => setPowerUnit('ps')}
+                  >
+                    <Text style={[{ fontSize: 9, fontWeight: '700', color: '#8b9bb4' }, powerUnit === 'ps' && { color: '#0a0d14' }]}>{t('psUnit')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <NumericInput
+                value={powerUnit === 'ps' ? Math.round(hpToPs(inputs.hp)) : inputs.hp}
+                min={30}
+                max={3000}
+                onValueChange={v => updateNumeric('hp', powerUnit === 'ps' ? psToHp(v) : v)}
+              />
+              <Text style={{ fontSize: 9, color: '#63738a', marginTop: 2 }}>
+                {powerUnit === 'ps' ? t('approxHp', { val: inputs.hp }) : t('approxPs', { val: Math.round(hpToPs(inputs.hp)) })}
+              </Text>
+            </View>
+            <View style={styles.col}>
+              <Text style={styles.label}>{t('weight', { unit: isImp ? 'lbs' : 'kg' })}</Text>
+              <NumericInput
+                value={inputs.weight}
+                min={300}
+                max={9000}
+                onValueChange={v => updateNumeric('weight', v)}
               />
             </View>
             <View style={styles.col}>
-              <Text style={styles.label}>Weight ({isImp ? 'lbs' : 'kg'})</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={String(inputs.weight)}
-                onChangeText={v => updateNumeric('weight', v)}
-              />
-            </View>
-            <View style={styles.col}>
-              <Text style={styles.label}>Front Wt %</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={String(inputs.frontWeightPct)}
-                onChangeText={v => updateNumeric('frontWeightPct', v)}
+              <Text style={styles.label}>{t('frontWeightPct')}</Text>
+              <NumericInput
+                value={inputs.frontWeightPct}
+                decimals={1}
+                min={30}
+                max={75}
+                onValueChange={v => updateNumeric('frontWeightPct', v)}
               />
             </View>
           </View>
@@ -283,105 +352,117 @@ export default function App() {
 
         {/* 2. TIRE SIZES & KINEMATICS */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>2. Front & Rear Tire Sizes</Text>
+          <Text style={styles.cardTitle}>{t('frontRearTireSizes')}</Text>
 
-          <Text style={styles.label}>Front Tire (Width mm / Aspect % / Rim in)</Text>
+          <Text style={styles.label}>{t('frontTireLabel')}</Text>
           <View style={styles.row}>
-            <TextInput
-              style={[styles.input, styles.col]}
-              keyboardType="numeric"
-              placeholder="Width"
-              value={String(inputs.tWidthF)}
-              onChangeText={v => updateNumeric('tWidthF', v)}
+            <NumericInput
+              style={styles.col}
+              placeholder={t('placeholderWidth')}
+              value={inputs.tWidthF}
+              min={125}
+              max={455}
+              onValueChange={v => updateNumeric('tWidthF', v)}
             />
-            <TextInput
-              style={[styles.input, styles.col]}
-              keyboardType="numeric"
-              placeholder="Profile"
-              value={String(inputs.tProfileF)}
-              onChangeText={v => updateNumeric('tProfileF', v)}
+            <NumericInput
+              style={styles.col}
+              placeholder={t('placeholderProfile')}
+              value={inputs.tProfileF}
+              min={15}
+              max={85}
+              onValueChange={v => updateNumeric('tProfileF', v)}
             />
-            <TextInput
-              style={[styles.input, styles.col]}
-              keyboardType="numeric"
-              placeholder="Rim"
-              value={String(inputs.tRimF)}
-              onChangeText={v => updateNumeric('tRimF', v)}
+            <NumericInput
+              style={styles.col}
+              placeholder={t('placeholderRim')}
+              value={inputs.tRimF}
+              min={12}
+              max={26}
+              onValueChange={v => updateNumeric('tRimF', v)}
             />
           </View>
           <Text style={styles.badgeInfo}>
-            Front Dia: {isImp ? `${(diaF * 39.3701).toFixed(1)} in` : `${(diaF * 100).toFixed(1)} cm`} | Circ: {isImp ? `${(Math.PI * diaF * 3.28084).toFixed(2)} ft` : `${(Math.PI * diaF).toFixed(2)} m`}
+            {t('frontDiaCirc', {
+              dia: isImp ? `${(diaF * 39.3701).toFixed(1)} in` : `${(diaF * 100).toFixed(1)} cm`,
+              circ: isImp ? `${(Math.PI * diaF * 3.28084).toFixed(2)} ft` : `${(Math.PI * diaF).toFixed(2)} m`,
+            })}
           </Text>
 
-          <Text style={[styles.label, { marginTop: 10 }]}>Rear Tire (Width mm / Aspect % / Rim in)</Text>
+          <Text style={[styles.label, { marginTop: 10 }]}>{t('rearTireLabel')}</Text>
           <View style={styles.row}>
-            <TextInput
-              style={[styles.input, styles.col]}
-              keyboardType="numeric"
-              placeholder="Width"
-              value={String(inputs.tWidthR)}
-              onChangeText={v => updateNumeric('tWidthR', v)}
+            <NumericInput
+              style={styles.col}
+              placeholder={t('placeholderWidth')}
+              value={inputs.tWidthR}
+              min={125}
+              max={455}
+              onValueChange={v => updateNumeric('tWidthR', v)}
             />
-            <TextInput
-              style={[styles.input, styles.col]}
-              placeholder="Profile"
-              keyboardType="numeric"
-              value={String(inputs.tProfileR)}
-              onChangeText={v => updateNumeric('tProfileR', v)}
+            <NumericInput
+              style={styles.col}
+              placeholder={t('placeholderProfile')}
+              value={inputs.tProfileR}
+              min={15}
+              max={85}
+              onValueChange={v => updateNumeric('tProfileR', v)}
             />
-            <TextInput
-              style={[styles.input, styles.col]}
-              placeholder="Rim"
-              keyboardType="numeric"
-              value={String(inputs.tRimR)}
-              onChangeText={v => updateNumeric('tRimR', v)}
+            <NumericInput
+              style={styles.col}
+              placeholder={t('placeholderRim')}
+              value={inputs.tRimR}
+              min={12}
+              max={26}
+              onValueChange={v => updateNumeric('tRimR', v)}
             />
           </View>
           <Text style={styles.badgeInfo}>
-            Rear Dia: {isImp ? `${(diaR * 39.3701).toFixed(1)} in` : `${(diaR * 100).toFixed(1)} cm`} | Circ: {isImp ? `${(Math.PI * diaR * 3.28084).toFixed(2)} ft` : `${(Math.PI * diaR).toFixed(2)} m`}
+            {t('rearDiaCirc', {
+              dia: isImp ? `${(diaR * 39.3701).toFixed(1)} in` : `${(diaR * 100).toFixed(1)} cm`,
+              circ: isImp ? `${(Math.PI * diaR * 3.28084).toFixed(2)} ft` : `${(Math.PI * diaR).toFixed(2)} m`,
+            })}
           </Text>
         </View>
 
         {/* 3. SUSPENSION & RIDE HEIGHT BOUNDS */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>3. In-Game Slider Limits</Text>
+          <Text style={styles.cardTitle}>{t('sliderLimits')}</Text>
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Text style={styles.label}>Front Springs ({isImp ? 'lb/in' : 'kgf/mm'})</Text>
+              <Text style={styles.label}>{t('frontSprings', { unit: isImp ? 'lb/in' : 'kgf/mm' })}</Text>
               <View style={styles.rowTight}>
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Min"
-                  value={String(inputs.springFrontMin)}
-                  onChangeText={v => updateNumeric('springFrontMin', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMin')}
+                  value={inputs.springFrontMin}
+                  decimals={1}
+                  onValueChange={v => updateNumeric('springFrontMin', v)}
                 />
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Max"
-                  value={String(inputs.springFrontMax)}
-                  onChangeText={v => updateNumeric('springFrontMax', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMax')}
+                  value={inputs.springFrontMax}
+                  decimals={1}
+                  onValueChange={v => updateNumeric('springFrontMax', v)}
                 />
               </View>
             </View>
             <View style={styles.col}>
-              <Text style={styles.label}>Rear Springs ({isImp ? 'lb/in' : 'kgf/mm'})</Text>
+              <Text style={styles.label}>{t('rearSprings', { unit: isImp ? 'lb/in' : 'kgf/mm' })}</Text>
               <View style={styles.rowTight}>
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Min"
-                  value={String(inputs.springRearMin)}
-                  onChangeText={v => updateNumeric('springRearMin', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMin')}
+                  value={inputs.springRearMin}
+                  decimals={1}
+                  onValueChange={v => updateNumeric('springRearMin', v)}
                 />
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Max"
-                  value={String(inputs.springRearMax)}
-                  onChangeText={v => updateNumeric('springRearMax', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMax')}
+                  value={inputs.springRearMax}
+                  decimals={1}
+                  onValueChange={v => updateNumeric('springRearMax', v)}
                 />
               </View>
             </View>
@@ -389,40 +470,40 @@ export default function App() {
 
           <View style={[styles.row, { marginTop: 6 }]}>
             <View style={styles.col}>
-              <Text style={styles.label}>Front Ride Height ({isImp ? 'in' : 'cm'})</Text>
+              <Text style={styles.label}>{t('frontRideHeight', { unit: isImp ? 'in' : 'cm' })}</Text>
               <View style={styles.rowTight}>
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Min"
-                  value={String(inputs.heightFrontMin)}
-                  onChangeText={v => updateNumeric('heightFrontMin', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMin')}
+                  value={inputs.heightFrontMin}
+                  decimals={1}
+                  onValueChange={v => updateNumeric('heightFrontMin', v)}
                 />
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Max"
-                  value={String(inputs.heightFrontMax)}
-                  onChangeText={v => updateNumeric('heightFrontMax', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMax')}
+                  value={inputs.heightFrontMax}
+                  decimals={1}
+                  onValueChange={v => updateNumeric('heightFrontMax', v)}
                 />
               </View>
             </View>
             <View style={styles.col}>
-              <Text style={styles.label}>Rear Ride Height ({isImp ? 'in' : 'cm'})</Text>
+              <Text style={styles.label}>{t('rearRideHeight', { unit: isImp ? 'in' : 'cm' })}</Text>
               <View style={styles.rowTight}>
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Min"
-                  value={String(inputs.heightRearMin)}
-                  onChangeText={v => updateNumeric('heightRearMin', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMin')}
+                  value={inputs.heightRearMin}
+                  decimals={1}
+                  onValueChange={v => updateNumeric('heightRearMin', v)}
                 />
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Max"
-                  value={String(inputs.heightRearMax)}
-                  onChangeText={v => updateNumeric('heightRearMax', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMax')}
+                  value={inputs.heightRearMax}
+                  decimals={1}
+                  onValueChange={v => updateNumeric('heightRearMax', v)}
                 />
               </View>
             </View>
@@ -431,44 +512,40 @@ export default function App() {
 
         {/* 4. AERO DOWNFORCE BOUNDS */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>4. Aero Downforce Slider Limits</Text>
+          <Text style={styles.cardTitle}>{t('aeroLimits')}</Text>
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Text style={styles.label}>Front Aero ({isImp ? 'lbf' : 'kgf'})</Text>
+              <Text style={styles.label}>{t('frontAero', { unit: isImp ? 'lbf' : 'kgf' })}</Text>
               <View style={styles.rowTight}>
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Min"
-                  value={String(inputs.aeroFrontMin)}
-                  onChangeText={v => updateNumeric('aeroFrontMin', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMin')}
+                  value={inputs.aeroFrontMin}
+                  onValueChange={v => updateNumeric('aeroFrontMin', v)}
                 />
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Max"
-                  value={String(inputs.aeroFrontMax)}
-                  onChangeText={v => updateNumeric('aeroFrontMax', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMax')}
+                  value={inputs.aeroFrontMax}
+                  onValueChange={v => updateNumeric('aeroFrontMax', v)}
                 />
               </View>
             </View>
             <View style={styles.col}>
-              <Text style={styles.label}>Rear Aero ({isImp ? 'lbf' : 'kgf'})</Text>
+              <Text style={styles.label}>{t('rearAero', { unit: isImp ? 'lbf' : 'kgf' })}</Text>
               <View style={styles.rowTight}>
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Min"
-                  value={String(inputs.aeroRearMin)}
-                  onChangeText={v => updateNumeric('aeroRearMin', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMin')}
+                  value={inputs.aeroRearMin}
+                  onValueChange={v => updateNumeric('aeroRearMin', v)}
                 />
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  keyboardType="numeric"
-                  placeholder="Max"
-                  value={String(inputs.aeroRearMax)}
-                  onChangeText={v => updateNumeric('aeroRearMax', v)}
+                <NumericInput
+                  style={styles.inputHalf}
+                  placeholder={t('placeholderMax')}
+                  value={inputs.aeroRearMax}
+                  onValueChange={v => updateNumeric('aeroRearMax', v)}
                 />
               </View>
             </View>
@@ -477,49 +554,59 @@ export default function App() {
 
         {/* 5. ENGINE & GEARING SPECS */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>5. Engine & Transmission Specs</Text>
+          <Text style={styles.cardTitle}>{t('engineTransmissionSpecs')}</Text>
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Text style={styles.label}>Redline RPM</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={String(inputs.redlineRpm)}
-                onChangeText={v => updateNumeric('redlineRpm', v)}
+              <Text style={styles.label}>{t('redlineRpm')}</Text>
+              <NumericInput
+                value={inputs.redlineRpm}
+                min={2000}
+                max={22000}
+                onValueChange={v => updateNumeric('redlineRpm', v)}
               />
             </View>
             <View style={styles.col}>
-              <Text style={styles.label}>Top Speed ({isImp ? 'mph' : 'km/h'})</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={String(inputs.topSpeed)}
-                onChangeText={v => updateNumeric('topSpeed', v)}
+              <Text style={styles.label}>{t('topSpeed', { unit: isImp ? 'mph' : 'km/h' })}</Text>
+              <NumericInput
+                value={inputs.topSpeed}
+                min={50}
+                max={550}
+                onValueChange={v => updateNumeric('topSpeed', v)}
               />
             </View>
             <View style={styles.col}>
-              <Text style={styles.label}>Gears (1-10)</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={String(inputs.numGears)}
-                onChangeText={v => updateNumeric('numGears', v)}
+              <Text style={styles.label}>{t('gears')}</Text>
+              <NumericInput
+                value={inputs.numGears}
+                min={1}
+                max={10}
+                decimals={0}
+                onValueChange={v => updateNumeric('numGears', v)}
               />
             </View>
           </View>
 
-          <Text style={[styles.label, { marginTop: 8 }]}>Power Band Curve</Text>
+          <Text style={[styles.label, { marginTop: 8 }]}>{t('powerBandCurve')}</Text>
           <View style={styles.pillGroupFull}>
             {([
-              { key: 'balanced', label: 'Balanced / Turbo' },
-              { key: 'highrev', label: 'High-Rev NA (VTEC)' },
-              { key: 'torque', label: 'High Torque (V8/Diesel)' },
+              { key: 'balanced', label: t('balancedTurbo') },
+              { key: 'highrev', label: t('highRevNA') },
+              { key: 'torque', label: t('highTorque') },
+              { key: 'ev', label: t('electricEV') },
             ] as { key: EngineType; label: string }[]).map(et => (
               <TouchableOpacity
                 key={et.key}
                 style={[styles.subPill, inputs.engineType === et.key && styles.subPillActive]}
-                onPress={() => setInputs(p => ({ ...p, engineType: et.key }))}
+                onPress={() => {
+                  setInputs(p => ({
+                    ...p,
+                    engineType: et.key,
+                    ...(et.key === 'ev' && p.numGears > 2
+                      ? { numGears: 1, redlineRpm: Math.max(p.redlineRpm, 16000) }
+                      : {}),
+                  }));
+                }}
               >
                 <Text style={[styles.subPillText, inputs.engineType === et.key && styles.subPillTextActive]}>{et.label}</Text>
               </TouchableOpacity>
@@ -529,82 +616,83 @@ export default function App() {
 
         {/* OUTPUT RESULTS CARD */}
         <View style={styles.card}>
-          <Text style={styles.cardTitleAccent}>Calculated Tune Setup</Text>
+          <Text style={styles.cardTitleAccent}>{t('calculatedTuneSetup')}</Text>
 
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Tire Pressure (F / R):</Text>
-            <Text style={styles.outVal}>{tune.tireFront} / {tune.tireRear}</Text>
+            <Text style={styles.outLabel}>{t('tirePressureFR')}</Text>
+            <Text style={styles.outVal}>{`${tune.tireFront} / ${tune.tireRear}`}</Text>
           </View>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Camber (F / R):</Text>
-            <Text style={styles.outVal}>{tune.camberFront} / {tune.camberRear}</Text>
+            <Text style={styles.outLabel}>{t('camberFR')}</Text>
+            <Text style={styles.outVal}>{`${tune.camberFront} / ${tune.camberRear}`}</Text>
           </View>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Toe (F / R):</Text>
-            <Text style={styles.outVal}>{tune.toeFront} / {tune.toeRear}</Text>
+            <Text style={styles.outLabel}>{t('toeFR')}</Text>
+            <Text style={styles.outVal}>{`${tune.toeFront} / ${tune.toeRear}`}</Text>
           </View>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Caster Angle:</Text>
+            <Text style={styles.outLabel}>{t('casterAngle')}</Text>
             <Text style={styles.outVal}>{tune.caster}</Text>
           </View>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Anti-Roll Bars (F / R):</Text>
-            <Text style={styles.outVal}>{tune.arbFront} / {tune.arbRear}</Text>
+            <Text style={styles.outLabel}>{t('arbFR')}</Text>
+            <Text style={styles.outVal}>{`${tune.arbFront} / ${tune.arbRear}`}</Text>
           </View>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Springs (F / R):</Text>
-            <Text style={styles.outVal}>{tune.springFront} / {tune.springRear}</Text>
+            <Text style={styles.outLabel}>{t('springsFR')}</Text>
+            <Text style={styles.outVal}>{`${tune.springFront} / ${tune.springRear}`}</Text>
           </View>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Ride Height (F / R):</Text>
-            <Text style={styles.outVal}>{tune.heightFront} / {tune.heightRear}</Text>
+            <Text style={styles.outLabel}>{t('rideHeightFR')}</Text>
+            <Text style={styles.outVal}>{`${tune.heightFront} / ${tune.heightRear}`}</Text>
           </View>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Rebound Damping (F / R):</Text>
-            <Text style={styles.outVal}>{tune.rebFront} / {tune.rebRear}</Text>
+            <Text style={styles.outLabel}>{t('reboundDampingFR')}</Text>
+            <Text style={styles.outVal}>{`${tune.rebFront} / ${tune.rebRear}`}</Text>
           </View>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Bump Damping (F / R):</Text>
-            <Text style={styles.outVal}>{tune.bmpFront} / {tune.bmpRear}</Text>
+            <Text style={styles.outLabel}>{t('bumpDampingFR')}</Text>
+            <Text style={styles.outVal}>{`${tune.bmpFront} / ${tune.bmpRear}`}</Text>
           </View>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Aero Downforce (F / R):</Text>
-            <Text style={styles.outVal}>{tune.aeroFront} / {tune.aeroRear}</Text>
+            <Text style={styles.outLabel}>{t('aeroDownforceFR')}</Text>
+            <Text style={styles.outVal}>{`${tune.aeroFront} / ${tune.aeroRear}`}</Text>
           </View>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Brakes (Balance / Pressure):</Text>
-            <Text style={styles.outVal}>{tune.brakeBalance} / {tune.brakePressure}</Text>
+            <Text style={styles.outLabel}>{t('brakesBalancePressure')}</Text>
+            <Text style={styles.outVal}>{`${tune.brakeBalance} / ${tune.brakePressure}`}</Text>
           </View>
 
-          {tune.diffRear && (
-            <View style={styles.outputRow}>
-              <Text style={styles.outLabel}>Rear Diff (Acc / Dec):</Text>
-              <Text style={styles.outVal}>{tune.diffRear}</Text>
-            </View>
-          )}
+          {/* Differential Order Matching Forza Menu: Front -> Rear -> Center */}
           {tune.diffFront && (
             <View style={styles.outputRow}>
-              <Text style={styles.outLabel}>Front Diff (Acc / Dec):</Text>
+              <Text style={styles.outLabel}>{t('frontDiffAccDec')}</Text>
               <Text style={styles.outVal}>{tune.diffFront}</Text>
+            </View>
+          )}
+          {tune.diffRear && (
+            <View style={styles.outputRow}>
+              <Text style={styles.outLabel}>{t('rearDiffAccDec')}</Text>
+              <Text style={styles.outVal}>{tune.diffRear}</Text>
             </View>
           )}
           {tune.diffCenter && (
             <View style={styles.outputRow}>
-              <Text style={styles.outLabel}>Center Differential Bias:</Text>
+              <Text style={styles.outLabel}>{t('centerDiffBias')}</Text>
               <Text style={styles.outVal}>{tune.diffCenter}</Text>
             </View>
           )}
 
-          <Text style={styles.sectionDivider}>Gearing & Transmission</Text>
+          <Text style={styles.sectionDivider}>{t('gearingTransmission')}</Text>
           <View style={styles.outputRow}>
-            <Text style={styles.outLabel}>Calculated Final Drive:</Text>
+            <Text style={styles.outLabel}>{t('calculatedFinalDrive')}</Text>
             <Text style={styles.outVal}>{tune.finalDrive}</Text>
           </View>
 
           <View style={styles.gearsGrid}>
             {tune.gearRatios.map((ratio, idx) => (
               <View key={`g-${idx}`} style={styles.gearPill}>
-                <Text style={styles.gearLabel}>G{idx + 1}</Text>
+                <Text style={styles.gearLabel}>{t('gearPrefix', { num: idx + 1 })}</Text>
                 <Text style={styles.gearVal}>{ratio.toFixed(2)}</Text>
               </View>
             ))}
@@ -629,39 +717,43 @@ export default function App() {
         />
 
         {/* GARAGE PRESET MODAL */}
-        <Modal visible={presetModalVisible} animationType="slide" transparent>
-          <View style={styles.modalOverlay}>
+        <Modal visible={presetModalVisible} animationType="slide" transparent onRequestClose={() => setPresetModalVisible(false)}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalOverlay}
+          >
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Car Garage Presets</Text>
+              <Text style={styles.modalTitle}>{t('carGaragePresets')}</Text>
 
               <View style={styles.saveRow}>
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
-                  placeholder="New Preset Name (e.g. R34 Drift)"
+                  placeholder={t('newPresetPlaceholder')}
                   placeholderTextColor="#63738a"
                   value={presetNameInput}
                   onChangeText={setPresetNameInput}
                 />
                 <TouchableOpacity style={styles.saveActionBtn} onPress={handleSavePreset}>
-                  <Text style={styles.saveActionBtnText}>Save</Text>
+                  <Text style={styles.saveActionBtnText}>{t('save')}</Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={[styles.label, { marginTop: 12 }]}>Saved Vehicles:</Text>
-              {Object.keys(savedPresets).length === 0 ? (
-                <Text style={styles.emptyText}>No presets saved yet.</Text>
+              <Text style={[styles.label, { marginTop: 12 }]}>{t('savedVehicles')}</Text>
+              {savedPresets.length === 0 ? (
+                <Text style={styles.emptyText}>{t('noPresetsSaved')}</Text>
               ) : (
                 <FlatList
-                  data={Object.keys(savedPresets)}
-                  keyExtractor={item => item}
+                  data={savedPresets}
+                  keyExtractor={item => item.id}
                   style={{ maxHeight: 200 }}
+                  keyboardShouldPersistTaps="handled"
                   renderItem={({ item }) => (
                     <View style={styles.presetItem}>
                       <TouchableOpacity style={{ flex: 1 }} onPress={() => handleLoadPreset(item)}>
-                        <Text style={styles.presetItemText}>{item}</Text>
+                        <Text style={styles.presetItemText}>{item.name}</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDeletePreset(item)}>
-                        <Text style={styles.deleteBtnText}>Delete</Text>
+                      <TouchableOpacity onPress={() => handleDeletePreset(item)} style={{ padding: 4 }}>
+                        <Text style={styles.deleteBtnText}>{t('delete')}</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -669,10 +761,10 @@ export default function App() {
               )}
 
               <TouchableOpacity style={styles.closeBtn} onPress={() => setPresetModalVisible(false)}>
-                <Text style={styles.closeBtnText}>Close</Text>
+                <Text style={styles.closeBtnText}>{t('close')}</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
       </ScrollView>
     </SafeAreaView>
@@ -683,7 +775,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#0a0d14',
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 10 : 0,
   },
   container: { padding: 14, paddingBottom: 60 },
   header: { alignItems: 'center', marginBottom: 14, marginTop: 4 },
@@ -725,7 +816,7 @@ const styles = StyleSheet.create({
   gearLabel: { fontSize: 9, color: '#8b9bb4' },
   gearVal: { fontSize: 12, fontWeight: '700', color: '#39d353' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { width: '100%', backgroundColor: '#141923', borderWidth: 1, borderColor: '#232b3b', borderRadius: 12, padding: 18 },
+  modalContent: { width: '100%', maxWidth: 500, backgroundColor: '#141923', borderWidth: 1, borderColor: '#232b3b', borderRadius: 12, padding: 18 },
   modalTitle: { fontSize: 16, fontWeight: '800', color: '#00e5ff', textTransform: 'uppercase', marginBottom: 12 },
   saveRow: { flexDirection: 'row', gap: 8 },
   saveActionBtn: { backgroundColor: '#1f3a2b', borderWidth: 1, borderColor: '#2e6244', paddingHorizontal: 14, justifyContent: 'center', borderRadius: 6 },
