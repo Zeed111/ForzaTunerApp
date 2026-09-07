@@ -2,7 +2,7 @@ export type UnitSystem = 'metric' | 'imperial';
 export type CarCategory = 'jdm' | 'track' | 'classic' | 'supercar';
 export type Discipline = 'drift' | 'grip' | 'dirt' | 'offroad' | 'drag';
 export type Drivetrain = 'RWD' | 'AWD' | 'FWD';
-export type EngineType = 'balanced' | 'highrev' | 'torque';
+export type EngineType = 'balanced' | 'highrev' | 'torque' | 'ev';
 
 export interface VehicleInputs {
   units: UnitSystem;
@@ -72,201 +72,399 @@ export interface TuneResult {
 }
 
 function clamp(val: number, min: number, max: number): number {
+  if (isNaN(val)) return min;
   return Math.min(Math.max(val, min), max);
+}
+
+function formatToe(val: number): string {
+  if (Math.abs(val) < 0.005) return '0.00°';
+  // In Forza Horizon: Negative (-) is Toe-Out, Positive (+) is Toe-In
+  if (val < 0) {
+    return `${val.toFixed(2)}° (Out)`;
+  }
+  return `+${val.toFixed(2)}° (In)`;
 }
 
 export function calculateTune(car: VehicleInputs): TuneResult {
   const isImp = car.units === 'imperial';
-  const weightKg = isImp ? car.weight / 2.20462 : car.weight;
-  const fw = clamp(car.frontWeightPct / 100, 0.3, 0.75);
+  // Standardize weight to kg for internal physics calculations
+  const rawWeight = car.weight > 0 ? car.weight : (isImp ? 3000 : 1360);
+  const weightKg = clamp(isImp ? rawWeight / 2.20462 : rawWeight, 400, 4500);
+
+  const rawFw = car.frontWeightPct > 0 ? car.frontWeightPct : 52;
+  const fw = clamp(rawFw / 100, 0.30, 0.75);
   const rw = 1 - fw;
 
-  // 1. Tire Kinematics
-  const tireDiameterMF = (2 * (car.tWidthF * (car.tProfileF / 100)) + car.tRimF * 25.4) / 1000;
+  const frontMassKg = weightKg * fw;
+  const rearMassKg = weightKg * rw;
+  const safeHp = Math.max(30, car.hp || 300);
+  const hpFactor = clamp((safeHp - 250) / 750, 0, 1);
+  const powerToWeightTon = (safeHp / weightKg) * 1000;
+
+  // 1. Tire Kinematics & Stagger
+  const widthF = clamp(car.tWidthF || 245, 135, 405);
+  const profileF = clamp(car.tProfileF || 40, 20, 85);
+  const rimF = clamp(car.tRimF || 18, 12, 26);
+
+  const widthR = clamp(car.tWidthR || 275, 135, 405);
+  const profileR = clamp(car.tProfileR || 35, 20, 85);
+  const rimR = clamp(car.tRimR || 18, 12, 26);
+
+  const tireDiameterMF = Math.max(0.35, (2 * (widthF * (profileF / 100)) + rimF * 25.4) / 1000);
   const tireCircumferenceMF = Math.PI * tireDiameterMF;
-  const tireDiameterMR = (2 * (car.tWidthR * (car.tProfileR / 100)) + car.tRimR * 25.4) / 1000;
+  const tireDiameterMR = Math.max(0.35, (2 * (widthR * (profileR / 100)) + rimR * 25.4) / 1000);
   const tireCircumferenceMR = Math.PI * tireDiameterMR;
 
   let driveCircumferenceM = tireCircumferenceMR;
   if (car.drivetrain === 'FWD') driveCircumferenceM = tireCircumferenceMF;
   else if (car.drivetrain === 'AWD') driveCircumferenceM = tireCircumferenceMF * 0.4 + tireCircumferenceMR * 0.6;
 
-  // 2. Tire Pressures (in bar)
-  const massBarMod = clamp((weightKg - 1350) * 0.00025, -0.25, 0.35);
+  // Tire stagger ratio (wider rears increase natural understeer, needing rear roll compensation)
+  const stagger = clamp(widthR / widthF, 0.8, 1.5);
+  const widthScaleF = 245 / widthF;
+  const widthScaleR = 245 / widthR;
+
+  // 2. Tire Pressures (in bar) - Distinctly scaled by axle load and tire width
   let baseBarF = 2.0;
   let baseBarR = 2.0;
 
   if (car.discipline === 'drift') {
-    baseBarF = 2.3 + massBarMod * 0.5;
-    baseBarR = 1.65 + massBarMod * 0.5;
+    // Drift: Higher front pressure for crisp steering entry, lower rear pressure for wide contact patch under throttle
+    baseBarF = clamp(2.25 + (frontMassKg - 700) * 0.00038 * widthScaleF, 2.05, 2.70);
+    baseBarR = clamp(1.65 + (rearMassKg - 700) * 0.00032 * widthScaleR, 1.40, 2.15);
   } else if (car.discipline === 'grip') {
-    baseBarF = 1.95 + massBarMod + (fw - 0.5) * 0.2;
-    baseBarR = 1.95 + massBarMod + (rw - 0.5) * 0.2;
+    // Grip: Balanced pressure based on axle load distribution and tire width
+    baseBarF = clamp(1.95 + (frontMassKg - 700) * 0.00040 * widthScaleF, 1.75, 2.45);
+    baseBarR = clamp(1.95 + (rearMassKg - 700) * 0.00040 * widthScaleR, 1.75, 2.45);
   } else if (car.discipline === 'dirt') {
-    baseBarF = 1.65 + massBarMod * 0.7;
-    baseBarR = 1.65 + massBarMod * 0.7;
+    baseBarF = clamp(1.65 + (frontMassKg - 700) * 0.00030 * widthScaleF, 1.40, 2.10);
+    baseBarR = clamp(1.65 + (rearMassKg - 700) * 0.00030 * widthScaleR, 1.40, 2.10);
   } else if (car.discipline === 'offroad') {
-    baseBarF = 1.45 + massBarMod * 0.5;
-    baseBarR = 1.45 + massBarMod * 0.5;
+    baseBarF = clamp(1.45 + (frontMassKg - 700) * 0.00025 * widthScaleF, 1.25, 1.85);
+    baseBarR = clamp(1.45 + (rearMassKg - 700) * 0.00025 * widthScaleR, 1.25, 1.85);
   } else if (car.discipline === 'drag') {
-    baseBarF = 3.6;
-    baseBarR = 1.0;
+    baseBarF = clamp(3.20 + (frontMassKg - 700) * 0.0003, 2.80, 3.80);
+    baseBarR = clamp(1.10 + (rearMassKg - 700) * 0.0002, 1.05, 1.45);
   }
 
-  // 3. Alignment
-  let cF = 0, cR = 0, toeF = 0, toeR = 0, caster = 6.0;
+  // Clamp to Forza Horizon in-game minimum (1.05 bar / 15.2 PSI) and maximum (3.8 bar / 55.0 PSI)
+  baseBarF = clamp(baseBarF, 1.05, 3.80);
+  baseBarR = clamp(baseBarR, 1.05, 3.80);
+
+  // 3. Alignment (Camber, Toe, Caster)
+  // Profile mod: taller sidewalls deform more under lateral G, requiring more negative static camber
+  const profileModF = clamp((profileF - 35) * 0.015, -0.2, 0.4);
+  const profileModR = clamp((profileR - 35) * 0.015, -0.2, 0.4);
+  const massRollMod = clamp((weightKg - 1300) * 0.0003, -0.25, 0.45);
+
+  let cF = -1.8, cR = -1.2, toeF = 0.0, toeR = 0.0, caster = 6.2;
+
   if (car.discipline === 'drift') {
-    cF = -4.5 - (fw - 0.5) * 1.5;
-    cR = -0.5 + (rw - 0.5) * 0.5;
-    toeF = 0.8;
-    toeR = 0.0;
-    caster = 7.0;
+    // Front: heavy negative camber for steering angle, rear: near-zero camber for acceleration while sideways
+    cF = clamp(-4.4 - (fw - 0.5) * 1.6 - profileModF - massRollMod * 0.5, -5.5, -3.8);
+    cR = clamp(-0.4 - (rw - 0.5) * 0.8 - (powerToWeightTon > 380 ? 0.2 : 0), -1.2, -0.2);
+    // In Forza: Negative is Toe-Out (sharp turn-in and angle hold)
+    toeF = clamp(-0.55 - (fw - 0.5) * 0.8 - (safeHp > 600 ? 0.15 : 0), -1.2, -0.3);
+    // Rear: slight Toe-In for high-speed control or neutral
+    toeR = clamp((rw - 0.5) * 0.4, 0.0, 0.2);
+    caster = clamp(6.8 + (fw - 0.5) * 0.8, 6.5, 7.0);
   } else if (car.discipline === 'drag') {
     cF = 0.0; cR = 0.0; toeF = 0.0; toeR = 0.0; caster = 7.0;
   } else if (car.discipline === 'offroad') {
-    cF = -0.6 - (fw - 0.5) * 0.5;
-    cR = -0.4 - (rw - 0.5) * 0.4;
-    caster = 7.0;
+    cF = clamp(-0.6 - (fw - 0.5) * 0.6 - massRollMod * 0.4, -1.2, -0.4);
+    cR = clamp(-0.4 - (rw - 0.5) * 0.5 - massRollMod * 0.4, -0.9, -0.2);
+    toeF = 0.0; toeR = 0.0;
+    caster = 6.8;
   } else if (car.discipline === 'dirt') {
-    cF = -1.2 - (fw - 0.5) * 0.8;
-    cR = -0.8 - (rw - 0.5) * 0.6;
-    toeF = 0.1;
+    cF = clamp(-1.2 - (fw - 0.5) * 0.8 - profileModF, -1.8, -0.9);
+    cR = clamp(-0.8 - (rw - 0.5) * 0.6 - profileModR, -1.3, -0.5);
+    toeF = -0.10; // slight Toe-Out
+    toeR = 0.10;  // slight Toe-In for high-speed stability
     caster = 6.5;
   } else {
-    let baseCamberF = -1.8, baseCamberR = -1.2;
-    if (car.category === 'track') { baseCamberF = -2.4; baseCamberR = -1.6; caster = 6.8; }
-    else if (car.category === 'jdm') { baseCamberF = -2.0; baseCamberR = -1.3; caster = 6.3; }
-    else if (car.category === 'classic') { baseCamberF = -1.4; baseCamberR = -0.8; caster = 5.6; }
-    else if (car.category === 'supercar') { baseCamberF = -2.1; baseCamberR = -1.7; caster = 6.5; }
+    // Grip / Track / JDM / Classic / Supercar
+    let baseCamberF = -1.9, baseCamberR = -1.3, baseCaster = 6.3;
+    if (car.category === 'track') { baseCamberF = -2.4; baseCamberR = -1.7; baseCaster = 6.7; }
+    else if (car.category === 'jdm') { baseCamberF = -2.0; baseCamberR = -1.4; baseCaster = 6.3; }
+    else if (car.category === 'classic') { baseCamberF = -1.5; baseCamberR = -0.9; baseCaster = 5.7; }
+    else if (car.category === 'supercar') { baseCamberF = -2.2; baseCamberR = -1.8; baseCaster = 6.5; }
 
-    cF = baseCamberF - (fw - 0.5) * 1.2;
-    cR = baseCamberR - (rw - 0.5) * 1.0;
-    toeF = car.category === 'track' ? 0.1 : 0.0;
-    toeR = fw < 0.48 || car.category === 'supercar' ? 0.15 : fw > 0.56 ? -0.05 : 0.0;
+    cF = clamp(baseCamberF - (fw - 0.5) * 1.4 - profileModF - massRollMod, -3.2, -1.0);
+    cR = clamp(baseCamberR - (rw - 0.5) * 1.1 - profileModR - massRollMod, -2.5, -0.5);
+    toeF = car.category === 'track' ? -0.10 : 0.0;
+    toeR = fw < 0.48 || car.category === 'supercar' ? 0.15 : (fw > 0.56 ? 0.05 : 0.10);
+    caster = clamp(baseCaster + (fw - 0.5) * 0.8, 5.2, 7.0);
   }
 
   // 4. Springs, ARBs & Damping
-  let spF = 0, spR = 0;
-  let arbFront = '0', arbRear = '0';
-  let rebFront = '0', rebRear = '0';
-  let bmpFront = '0', bmpRear = '0';
-  let hF = 0, hR = 0;
-  const bumpFactor = car.discipline === 'offroad' ? 0.45 : car.discipline === 'dirt' ? 0.5 : 0.58;
+  const spFMin = car.springFrontMin || 100;
+  const spFMax = Math.max(spFMin + 1, car.springFrontMax || 600);
+  const spRMin = car.springRearMin || 100;
+  const spRMax = Math.max(spRMin + 1, car.springRearMax || 600);
+
+  const rangeSpF = spFMax - spFMin;
+  const rangeSpR = spRMax - spRMin;
+
+  let springRatioF = fw;
+  let springRatioR = rw;
+
+  if (car.discipline === 'drift') {
+    // Drift: Slightly softer rear spring allows rear to squat under throttle for forward bite
+    springRatioF = clamp(fw + 0.04, 0.25, 0.85);
+    springRatioR = clamp(rw - 0.06, 0.15, 0.80);
+  } else if (car.discipline === 'drag') {
+    springRatioF = 0.85;
+    springRatioR = 0.15;
+  } else if (car.discipline === 'offroad') {
+    springRatioF = clamp(fw * 0.75, 0.25, 0.60);
+    springRatioR = clamp(rw * 0.75, 0.25, 0.60);
+  } else if (car.discipline === 'dirt') {
+    springRatioF = clamp(fw * 0.85, 0.30, 0.70);
+    springRatioR = clamp(rw * 0.85, 0.30, 0.70);
+  }
+
+  const spF = spFMin + rangeSpF * springRatioF;
+  const spR = spRMin + rangeSpR * springRatioR;
+
+  // Anti-Roll Bars (ARBs): Scale with total vehicle weight and tire stagger
+  const weightArbScale = clamp(weightKg / 1380, 0.70, 1.45);
+  let baseArbF = ((65 - 1) * fw + 1) * weightArbScale;
+  let baseArbR = ((65 - 1) * rw + 1) * weightArbScale;
+
+  // If rear tires are much wider than fronts, stiffen rear ARB to balance turn-in
+  baseArbR *= Math.pow(stagger, 0.6);
+
+  let arbF = 0, arbR = 0;
+  if (car.discipline === 'drag') {
+    arbF = clamp(18 * weightArbScale, 10, 30);
+    arbR = clamp(62 * weightArbScale, 45, 65);
+  } else if (car.discipline === 'drift') {
+    // Drift: Firm front for rapid transitions, balanced rear scaled with power
+    arbF = clamp(baseArbF * 1.08, 20, 60);
+    arbR = clamp(baseArbR * (0.65 + hpFactor * 0.30), 12, 50);
+  } else if (car.discipline === 'offroad') {
+    // Offroad: Soft ARBs allow independent wheel travel over rocks and uneven terrain
+    arbF = clamp(baseArbF * 0.35, 4, 24);
+    arbR = clamp(baseArbR * 0.35, 4, 24);
+  } else if (car.discipline === 'dirt') {
+    arbF = clamp(baseArbF * 0.50, 8, 32);
+    arbR = clamp(baseArbR * 0.50, 8, 32);
+  } else {
+    // Grip
+    arbF = clamp(baseArbF, 12, 60);
+    arbR = clamp(baseArbR, 12, 60);
+  }
+
+  // Damping: Damped according to corner mass and spring stiffness (resolves mathematical cancellation bug)
+  const frontCornerKg = frontMassKg / 2;
+  const rearCornerKg = rearMassKg / 2;
+  const massDampModF = clamp((frontCornerKg - 350) / 350 * 2.2, -2.5, 3.2);
+  const massDampModR = clamp((rearCornerKg - 350) / 350 * 2.2, -2.5, 3.2);
+
+  const bumpFactor = car.discipline === 'offroad' ? 0.38 : car.discipline === 'dirt' ? 0.46 : 0.58;
+
+  let rebF_val = 10.0;
+  let rebR_val = 10.0;
+  let bmpF_val = 6.0;
+  let bmpR_val = 6.0;
 
   if (car.discipline === 'drag') {
-    spF = car.springFrontMin + (car.springFrontMax - car.springFrontMin) * 0.85;
-    spR = car.springRearMin + (car.springRearMax - car.springRearMin) * 0.15;
-    arbFront = '25.0'; arbRear = '65.0';
-    rebFront = '3.0'; rebRear = '19.0';
-    bmpFront = '16.0'; bmpRear = '3.5';
-    hF = car.heightFrontMin;
-    hR = car.heightRearMin + (car.heightRearMax - car.heightRearMin) * 0.6;
+    rebF_val = 3.0;
+    rebR_val = 19.0;
+    bmpF_val = 16.0;
+    bmpR_val = 3.5;
+  } else if (car.discipline === 'drift') {
+    // Drift: Firm front rebound controls transition snap; softer rear rebound keeps rear planted under power
+    rebF_val = clamp(10.8 + massDampModF + (springRatioF - 0.5) * 3.0, 6.0, 18.0);
+    rebR_val = clamp(8.4 + massDampModR + (springRatioR - 0.5) * 2.5, 4.5, 15.0);
+    bmpF_val = clamp(rebF_val * bumpFactor, 3.0, 12.0);
+    bmpR_val = clamp(rebR_val * (bumpFactor * 0.9), 2.5, 10.0);
+  } else if (car.discipline === 'offroad') {
+    rebF_val = clamp(5.5 + massDampModF * 0.6 + (springRatioF - 0.5) * 2.0, 3.0, 10.0);
+    rebR_val = clamp(5.5 + massDampModR * 0.6 + (springRatioR - 0.5) * 2.0, 3.0, 10.0);
+    bmpF_val = clamp(rebF_val * bumpFactor, 1.5, 5.5);
+    bmpR_val = clamp(rebR_val * bumpFactor, 1.5, 5.5);
+  } else if (car.discipline === 'dirt') {
+    rebF_val = clamp(7.2 + massDampModF * 0.8 + (springRatioF - 0.5) * 2.2, 4.0, 12.0);
+    rebR_val = clamp(7.2 + massDampModR * 0.8 + (springRatioR - 0.5) * 2.2, 4.0, 12.0);
+    bmpF_val = clamp(rebF_val * bumpFactor, 2.0, 7.0);
+    bmpR_val = clamp(rebR_val * bumpFactor, 2.0, 7.0);
   } else {
-    spF = car.springFrontMin + (car.springFrontMax - car.springFrontMin) * fw;
-    spR = car.springRearMin + (car.springRearMax - car.springRearMin) * rw;
-
-    let arbScaleF = (65 - 1) * fw + 1;
-    let arbScaleR = (65 - 1) * rw + 1;
-    if (car.discipline === 'drift') {
-      arbScaleF = clamp(arbScaleF * 1.1, 1, 65);
-      arbScaleR = clamp(arbScaleR * 0.65, 1, 65);
-    }
-    arbFront = arbScaleF.toFixed(1);
-    arbRear = arbScaleR.toFixed(1);
-
-    const fSpringNorm = (spF - car.springFrontMin) / Math.max(1, car.springFrontMax - car.springFrontMin);
-    const rSpringNorm = (spR - car.springRearMin) / Math.max(1, car.springRearMax - car.springRearMin);
-
-    const rF_val = clamp(3.5 + 13.5 * fSpringNorm, 2.0, 19.0);
-    const rR_val = clamp(3.5 + 13.5 * rSpringNorm, 2.0, 19.0);
-
-    rebFront = rF_val.toFixed(1);
-    rebRear = rR_val.toFixed(1);
-    bmpFront = (rF_val * bumpFactor).toFixed(1);
-    bmpRear = (rR_val * bumpFactor).toFixed(1);
-
-    const hRatio = car.discipline === 'offroad' ? 1.0 : car.discipline === 'dirt' ? 0.7 : car.discipline === 'drift' ? 0.15 : 0.1;
-    hF = car.heightFrontMin + (car.heightFrontMax - car.heightFrontMin) * hRatio;
-    hR = car.heightRearMin + (car.heightRearMax - car.heightRearMin) * hRatio;
+    // Grip
+    const catBase = car.category === 'track' ? 11.2 : car.category === 'supercar' ? 10.8 : 9.6;
+    rebF_val = clamp(catBase + massDampModF + (springRatioF - 0.5) * 3.5, 5.0, 18.0);
+    rebR_val = clamp(catBase + massDampModR + (springRatioR - 0.5) * 3.5, 5.0, 18.0);
+    bmpF_val = clamp(rebF_val * bumpFactor, 2.5, 11.5);
+    bmpR_val = clamp(rebR_val * bumpFactor, 2.5, 11.5);
   }
+
+  // Ride Height
+  const hFMin = car.heightFrontMin || 9.0;
+  const hFMax = Math.max(hFMin + 0.1, car.heightFrontMax || 18.0);
+  const hRMin = car.heightRearMin || 9.0;
+  const hRMax = Math.max(hRMin + 0.1, car.heightRearMax || 18.0);
+
+  let hRatioF = 0.15;
+  let hRatioR = 0.15;
+
+  if (car.discipline === 'offroad') {
+    hRatioF = 0.95; hRatioR = 0.95;
+  } else if (car.discipline === 'dirt') {
+    hRatioF = 0.65; hRatioR = 0.65;
+  } else if (car.discipline === 'drift') {
+    hRatioF = 0.12;
+    hRatioR = 0.18; // Slight rear rake for weight shift
+  } else if (car.discipline === 'drag') {
+    hRatioF = 0.05;
+    hRatioR = 0.60;
+  } else {
+    hRatioF = car.category === 'track' ? 0.08 : 0.15;
+    hRatioR = car.category === 'track' ? 0.12 : 0.18;
+  }
+
+  const hF = hFMin + (hFMax - hFMin) * hRatioF;
+  const hR = hRMin + (hRMax - hRMin) * hRatioR;
 
   // 5. Aero Downforce
-  let aeroF = car.aeroFrontMin;
-  let aeroR = car.aeroRearMin;
+  const aeroFMin = car.aeroFrontMin || 0;
+  const aeroFMax = Math.max(aeroFMin, car.aeroFrontMax || 150);
+  const aeroRMin = car.aeroRearMin || 0;
+  const aeroRMax = Math.max(aeroRMin, car.aeroRearMax || 250);
+
+  let aeroF = aeroFMin;
+  let aeroR = aeroRMin;
+
   if (car.discipline === 'offroad' || car.discipline === 'dirt') {
-    aeroF = car.aeroFrontMin + (car.aeroFrontMax - car.aeroFrontMin) * 0.4;
-    aeroR = car.aeroRearMin + (car.aeroRearMax - car.aeroRearMin) * 0.45;
-  } else if (car.discipline === 'grip') {
-    const baseGrip = car.category === 'track' ? 0.85 : 0.6;
-    aeroF = car.aeroFrontMin + (car.aeroFrontMax - car.aeroFrontMin) * clamp(baseGrip * (fw / 0.5), 0.15, 0.95);
-    aeroR = car.aeroRearMin + (car.aeroRearMax - car.aeroRearMin) * clamp(baseGrip * (rw / 0.5) * 1.08, 0.15, 0.95);
+    aeroF = aeroFMin + (aeroFMax - aeroFMin) * 0.35;
+    aeroR = aeroRMin + (aeroRMax - aeroRMin) * 0.40;
+  } else if (car.discipline === 'drift') {
+    // Drift: Lower rear wing reduces high-speed resistance while sliding, moderate front stabilizes angle
+    aeroF = aeroFMin + (aeroFMax - aeroFMin) * clamp(0.20 + hpFactor * 0.25, 0.15, 0.60);
+    aeroR = aeroRMin + (aeroRMax - aeroRMin) * clamp(0.25 + hpFactor * 0.30, 0.20, 0.70);
+  } else if (car.discipline === 'drag') {
+    aeroF = aeroFMin;
+    aeroR = aeroRMin;
+  } else {
+    // Grip
+    const baseGrip = car.category === 'track' ? 0.85 : 0.60;
+    aeroF = aeroFMin + (aeroFMax - aeroFMin) * clamp(baseGrip * (fw / 0.5), 0.15, 0.95);
+    aeroR = aeroRMin + (aeroRMax - aeroRMin) * clamp(baseGrip * (rw / 0.5) * 1.08, 0.15, 0.95);
   }
 
-  // 6. Differentials
+  // 6. Differentials - Distinctly scaled by horsepower and drivetrain
   let dFAcc = 0, dFDec = 0, dRAcc = 0, dRDec = 0, dCenter = 'N/A';
-  const hpFactor = clamp((car.hp - 300) / 700, 0, 1);
 
   if (car.drivetrain === 'RWD') {
-    if (car.discipline === 'drift' || car.discipline === 'drag') {
+    if (car.discipline === 'drift') {
+      dRAcc = 100;
+      dRDec = clamp(85 + Math.round(hpFactor * 15), 85, 100);
+    } else if (car.discipline === 'drag') {
       dRAcc = 100; dRDec = 100;
     } else if (car.discipline === 'dirt') {
-      dRAcc = Math.round(60 + hpFactor * 25);
-      dRDec = Math.round(10 + rw * 15);
+      dRAcc = clamp(55 + Math.round(hpFactor * 30), 50, 90);
+      dRDec = clamp(10 + Math.round(rw * 20), 8, 30);
     } else if (car.discipline === 'offroad') {
       dRAcc = 90; dRDec = 15;
     } else {
-      dRAcc = Math.round(45 + hpFactor * 35);
-      dRDec = Math.round(15 + rw * 30);
+      // Grip RWD
+      if (car.engineType === 'ev') {
+        dRAcc = clamp(78 + Math.round(hpFactor * 16), 75, 96);
+        dRDec = clamp(22 + Math.round(rw * 20), 15, 42);
+      } else {
+        dRAcc = clamp(42 + Math.round(hpFactor * 38), 35, 88);
+        dRDec = clamp(14 + Math.round(rw * 26), 10, 42);
+      }
     }
   } else if (car.drivetrain === 'AWD') {
     if (car.discipline === 'drift') {
-      dFAcc = 95; dFDec = 0; dRAcc = 100; dRDec = 90; dCenter = '85% Rear';
+      dFAcc = clamp(85 + Math.round(hpFactor * 15), 80, 100);
+      dFDec = 0;
+      dRAcc = 100;
+      dRDec = clamp(85 + Math.round(hpFactor * 10), 80, 95);
+      dCenter = `${clamp(Math.round(82 + hpFactor * 8), 80, 92)}% Rear`;
     } else if (car.discipline === 'drag') {
-      dFAcc = 100; dFDec = 0; dRAcc = 100; dRDec = 0; dCenter = `${Math.round(75 + hpFactor * 10)}% Rear`;
+      dFAcc = 100; dFDec = 0; dRAcc = 100; dRDec = 0;
+      dCenter = `${Math.round(72 + hpFactor * 12)}% Rear`;
     } else if (car.discipline === 'dirt') {
-      dFAcc = 50; dFDec = 0; dRAcc = 85; dRDec = 5; dCenter = '62% Rear';
+      dFAcc = clamp(45 + Math.round(hpFactor * 20), 40, 75);
+      dFDec = 0;
+      dRAcc = clamp(75 + Math.round(hpFactor * 20), 70, 95);
+      dRDec = 8;
+      dCenter = '64% Rear';
     } else if (car.discipline === 'offroad') {
       dFAcc = 90; dFDec = 0; dRAcc = 100; dRDec = 0; dCenter = '50% Balanced';
     } else {
-      dFAcc = Math.round(35 + rw * 20 + hpFactor * 10);
-      dFDec = 0;
-      dRAcc = Math.round(65 + hpFactor * 25);
-      dRDec = Math.round(10 + rw * 25);
-      dCenter = `${Math.round(clamp(62 + (fw - 0.5) * 30, 55, 78))}% Rear`;
+      // Grip AWD
+      if (car.engineType === 'ev') {
+        dFAcc = clamp(50 + Math.round(hpFactor * 25), 45, 78);
+        dFDec = 0;
+        dRAcc = clamp(80 + Math.round(hpFactor * 16), 75, 96);
+        dRDec = clamp(18 + Math.round(rw * 20), 12, 35);
+        dCenter = `${clamp(Math.round(65 + (fw - 0.5) * 20), 55, 75)}% Rear`;
+      } else {
+        dFAcc = clamp(30 + Math.round(rw * 20 + hpFactor * 15), 25, 65);
+        dFDec = 0;
+        dRAcc = clamp(62 + Math.round(hpFactor * 28), 55, 92);
+        dRDec = clamp(10 + Math.round(rw * 25), 8, 35);
+        dCenter = `${clamp(Math.round(62 + (fw - 0.5) * 28 + (safeHp > 600 ? 5 : 0)), 55, 80)}% Rear`;
+      }
     }
   } else if (car.drivetrain === 'FWD') {
-    dFAcc = car.discipline === 'drag' || car.discipline === 'drift' ? 100 : Math.round(35 + hpFactor * 30);
-    dFDec = Math.round(5 + (fw - 0.5) * 10);
+    if (car.discipline === 'drag' || car.discipline === 'drift') {
+      dFAcc = 100; dFDec = 0;
+    } else {
+      dFAcc = clamp(35 + Math.round(hpFactor * 35), 30, 75);
+      dFDec = clamp(5 + Math.round((fw - 0.5) * 12), 2, 18);
+    }
   }
 
   // 7. Brakes
-  const brakeBalance = Math.round(clamp(50 + (fw - 0.5) * 8, 48, 54));
+  const brakeBalance = clamp(Math.round(50 + (fw - 0.5) * 10 + (car.category === 'track' ? 1 : 0)), 47, 55);
   const brakePressure = car.discipline === 'drift' ? 130 : car.category === 'track' ? 115 : 100;
 
   // 8. Transmission Ratios
-  const topSpeedKm = isImp ? car.topSpeed * 1.60934 : car.topSpeed;
+  const rawTopSpeed = car.topSpeed > 0 ? car.topSpeed : (isImp ? 160 : 260);
+  const topSpeedKm = clamp(isImp ? rawTopSpeed * 1.60934 : rawTopSpeed, 80, 520);
   const speedMs = (topSpeedKm * 1000) / 3600;
-  const wheelRpmAtTopSpeed = (speedMs / driveCircumferenceM) * 60;
+  const wheelRpmAtTopSpeed = Math.max(10, (speedMs / Math.max(0.5, driveCircumferenceM)) * 60);
 
-  let gTop = car.discipline === 'drag' ? 0.9 : car.discipline === 'drift' ? 0.82 : 0.74;
-  let g1 = car.discipline === 'drag' ? 2.65 : car.discipline === 'offroad' ? 3.85 : car.discipline === 'drift' ? 3.1 : 3.35;
-  if (car.engineType === 'torque') { g1 *= 0.9; gTop *= 0.92; }
-  if (car.engineType === 'highrev') { g1 *= 1.1; gTop *= 1.05; }
+  const isEv = car.engineType === 'ev' || car.numGears === 1;
+  const maxRedline = isEv ? 22000 : 14000;
+  const defaultRedline = isEv ? 16000 : 7500;
+  const safeRedline = clamp(car.redlineRpm || defaultRedline, 2000, maxRedline);
 
-  const calculatedFD = clamp(car.redlineRpm / (wheelRpmAtTopSpeed * gTop), 2.2, 5.8);
+  let gTop = car.discipline === 'drag' ? 0.90 : car.discipline === 'drift' ? 0.82 : 0.74;
+  let g1 = car.discipline === 'drag' ? 2.65 : car.discipline === 'offroad' ? 3.85 : car.discipline === 'drift' ? 3.10 : 3.35;
+  if (car.engineType === 'torque') { g1 *= 0.90; gTop *= 0.92; }
+  if (car.engineType === 'highrev') { g1 *= 1.10; gTop *= 1.05; }
+  if (car.engineType === 'ev') { g1 = 2.40; gTop = 0.80; }
+
+  const numGears = clamp(Math.round(car.numGears || (isEv ? 1 : 6)), 1, 10);
   const gearRatios: number[] = [];
+  let calculatedFD = 3.50;
 
-  if (car.numGears === 1) {
-    gearRatios.push(1.0);
-  } else if (car.numGears === 2) {
-    gearRatios.push(Number((gTop * 1.82).toFixed(2)));
-    gearRatios.push(Number(gTop.toFixed(2)));
+  if (numGears === 1) {
+    // Single-speed EV / direct drive transmission: ratio is 1.00, entire reduction handled by Final Drive
+    gearRatios.push(1.00);
+    calculatedFD = clamp(safeRedline / wheelRpmAtTopSpeed, 2.20, 12.50);
+  } else if (numGears === 2) {
+    if (isEv) {
+      // 2-speed EV (e.g. Porsche Taycan: 1st gear launch reduction, 2nd gear direct drive)
+      gearRatios.push(1.85);
+      gearRatios.push(1.00);
+      calculatedFD = clamp(safeRedline / (wheelRpmAtTopSpeed * 1.00), 2.20, 11.00);
+    } else {
+      gearRatios.push(Number((gTop * 1.82).toFixed(2)));
+      gearRatios.push(Number(gTop.toFixed(2)));
+      calculatedFD = clamp(safeRedline / (wheelRpmAtTopSpeed * gTop), 2.20, 5.80);
+    }
   } else {
-    for (let i = 1; i <= car.numGears; i++) {
-      const t = (i - 1) / (car.numGears - 1);
+    for (let i = 1; i <= numGears; i++) {
+      const t = (i - 1) / (numGears - 1);
       const ratio = Number((g1 * Math.pow(gTop / g1, Math.pow(t, 0.86))).toFixed(2));
       gearRatios.push(ratio);
     }
+    calculatedFD = clamp(safeRedline / (wheelRpmAtTopSpeed * gTop), 2.20, 6.20);
   }
 
   return {
@@ -274,19 +472,19 @@ export function calculateTune(car: VehicleInputs): TuneResult {
     tireRear: isImp ? `${(baseBarR * 14.5038).toFixed(1)} PSI` : `${baseBarR.toFixed(2)} bar`,
     camberFront: `${cF.toFixed(1)}°`,
     camberRear: `${cR.toFixed(1)}°`,
-    toeFront: `${toeF > 0 ? '+' : ''}${toeF.toFixed(2)}° ${toeF > 0 ? '(Out)' : toeF < 0 ? '(In)' : ''}`,
-    toeRear: `${toeR > 0 ? '+' : ''}${toeR.toFixed(2)}° ${toeR > 0 ? '(In)' : toeR < 0 ? '(Out)' : ''}`,
+    toeFront: formatToe(toeF),
+    toeRear: formatToe(toeR),
     caster: `${caster.toFixed(1)}°`,
-    arbFront,
-    arbRear,
+    arbFront: arbF.toFixed(1),
+    arbRear: arbR.toFixed(1),
     springFront: isImp ? `${spF.toFixed(1)} lb/in` : `${spF.toFixed(1)} kgf/mm`,
     springRear: isImp ? `${spR.toFixed(1)} lb/in` : `${spR.toFixed(1)} kgf/mm`,
     heightFront: isImp ? `${hF.toFixed(1)} in` : `${hF.toFixed(1)} cm`,
     heightRear: isImp ? `${hR.toFixed(1)} in` : `${hR.toFixed(1)} cm`,
-    rebFront,
-    rebRear,
-    bmpFront,
-    bmpRear,
+    rebFront: rebF_val.toFixed(1),
+    rebRear: rebR_val.toFixed(1),
+    bmpFront: bmpF_val.toFixed(1),
+    bmpRear: bmpR_val.toFixed(1),
     aeroFront: isImp ? `${Math.round(aeroF)} lbf` : `${Math.round(aeroF)} kgf`,
     aeroRear: isImp ? `${Math.round(aeroR)} lbf` : `${Math.round(aeroR)} kgf`,
     brakeBalance: `${brakeBalance}% (Front)`,
@@ -297,7 +495,7 @@ export function calculateTune(car: VehicleInputs): TuneResult {
     finalDrive: calculatedFD.toFixed(2),
     gearRatios,
     driveCircumferenceM,
-    redlineRpm: car.redlineRpm,
-    targetSpeedDisplay: car.topSpeed,
+    redlineRpm: safeRedline,
+    targetSpeedDisplay: rawTopSpeed,
   };
 }
