@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -7,9 +7,13 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { FORZA_CAR_DATABASE, PredefinedCar } from '../data/cars';
 import { UnitSystem, VehicleInputs } from '../tuningEngine';
+import { convertPredefinedSpecsToUnits } from '../utils/units';
+import { t } from '../i18n';
 
 export interface CarSelectorModalProps {
   visible: boolean;
@@ -49,50 +53,46 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
 }) => {
   const [search, setSearch] = useState('');
 
-  const filteredCars = FORZA_CAR_DATABASE.filter(car => {
-    const term = search.toLowerCase();
-    const fullName = `${car.year || ''} ${car.brand || ''} ${car.name || ''}`.toLowerCase();
-    return fullName.includes(term);
-  });
+  const filteredCars = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return FORZA_CAR_DATABASE;
+    return FORZA_CAR_DATABASE.filter(car => {
+      const fullName = `${car.year || ''} ${car.brand || ''} ${car.name || ''}`.toLowerCase();
+      return fullName.includes(term);
+    });
+  }, [search]);
 
   const handleSelect = (car: PredefinedCar) => {
-    let specs = { ...car.specs };
-    if (units === 'imperial') {
-      specs = {
-        ...specs,
-        weight: Math.round(specs.weight * 2.20462),
-        springFrontMin: +(specs.springFrontMin * 55.997).toFixed(1),
-        springFrontMax: +(specs.springFrontMax * 55.997).toFixed(1),
-        springRearMin: +(specs.springRearMin * 55.997).toFixed(1),
-        springRearMax: +(specs.springRearMax * 55.997).toFixed(1),
-        heightFrontMin: +(specs.heightFrontMin / 2.54).toFixed(1),
-        heightFrontMax: +(specs.heightFrontMax / 2.54).toFixed(1),
-        heightRearMin: +(specs.heightRearMin / 2.54).toFixed(1),
-        heightRearMax: +(specs.heightRearMax / 2.54).toFixed(1),
-        aeroFrontMin: Math.round(specs.aeroFrontMin * 2.20462),
-        aeroFrontMax: Math.round(specs.aeroFrontMax * 2.20462),
-        aeroRearMin: Math.round(specs.aeroRearMin * 2.20462),
-        aeroRearMax: Math.round(specs.aeroRearMax * 2.20462),
-        topSpeed: Math.round(specs.topSpeed / 1.60934),
-      };
-    }
+    const specs = convertPredefinedSpecsToUnits(car.specs, units);
     onSelectCar(specs);
     onClose();
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalOverlay}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.modalOverlay}
+      >
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Select Vehicle ({filteredCars.length})</Text>
+          <Text style={styles.modalTitle}>{t('selectVehicle', { count: filteredCars.length })}</Text>
 
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search manufacturer, model, or year..."
-            placeholderTextColor="#63738a"
-            value={search}
-            onChangeText={setSearch}
-          />
+          <View style={styles.searchRow}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('searchPlaceholder')}
+              placeholderTextColor="#63738a"
+              value={search}
+              onChangeText={setSearch}
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+            />
+            {search.length > 0 && (
+              <TouchableOpacity style={styles.clearSearchBtn} onPress={() => setSearch('')}>
+                <Text style={styles.clearSearchText}>{t('clearSymbol')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           <FlatList
             data={filteredCars}
@@ -101,16 +101,26 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
             initialNumToRender={15}
             maxToRenderPerBatch={20}
             windowSize={5}
+            keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>{t('noVehiclesMatching', { search })}</Text>
+              </View>
+            }
             renderItem={({ item }) => {
               const carClass = item.piClass || 'A';
               const badgeBg = getPiColor(carClass);
 
               return (
                 <TouchableOpacity style={styles.carItem} onPress={() => handleSelect(item)}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.carName}>{item.year} {item.brand} {item.name}</Text>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={styles.carName}>{`${item.year || ''} ${item.brand || ''} ${item.name || ''}`.trim()}</Text>
                     <Text style={styles.carMeta}>
-                      {item.specs.drivetrain} • {item.specs.hp} HP • {item.specs.category.toUpperCase()}
+                      {t('carSpecsMeta', {
+                        drivetrain: item.specs.drivetrain,
+                        hp: item.specs.hp,
+                        category: item.specs.category.toUpperCase(),
+                      })}
                     </Text>
                   </View>
                   <View style={[styles.piBadge, { backgroundColor: badgeBg }]}>
@@ -122,24 +132,29 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
           />
 
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeBtnText}>Cancel</Text>
+            <Text style={styles.closeBtnText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  modalContent: { width: '100%', backgroundColor: '#141923', borderWidth: 1, borderColor: '#232b3b', borderRadius: 12, padding: 16 },
+  modalContent: { width: '100%', maxWidth: 500, backgroundColor: '#141923', borderWidth: 1, borderColor: '#232b3b', borderRadius: 12, padding: 16 },
   modalTitle: { fontSize: 16, fontWeight: '800', color: '#00e5ff', textTransform: 'uppercase', marginBottom: 10 },
-  searchInput: { backgroundColor: '#0b0e17', borderWidth: 1, borderColor: '#232b3b', borderRadius: 6, color: '#f0f6fc', paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, marginBottom: 12 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, position: 'relative' },
+  searchInput: { flex: 1, backgroundColor: '#0b0e17', borderWidth: 1, borderColor: '#232b3b', borderRadius: 6, color: '#f0f6fc', paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, paddingRight: 36 },
+  clearSearchBtn: { position: 'absolute', right: 10, padding: 4 },
+  clearSearchText: { color: '#8b9bb4', fontSize: 14, fontWeight: 'bold' },
   carItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#232b3b' },
   carName: { color: '#f0f6fc', fontSize: 13, fontWeight: '700' },
   carMeta: { color: '#8b9bb4', fontSize: 11, marginTop: 2 },
   piBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, minWidth: 28, alignItems: 'center' },
   piBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  closeBtn: { marginTop: 12, backgroundColor: '#0b0e17', borderWidth: 1, borderColor: '#232b3b', paddingVertical: 8, borderRadius: 6, alignItems: 'center' },
+  emptyContainer: { paddingVertical: 30, alignItems: 'center' },
+  emptyText: { color: '#63738a', fontSize: 13, fontStyle: 'italic' },
+  closeBtn: { marginTop: 12, backgroundColor: '#0b0e17', borderWidth: 1, borderColor: '#232b3b', paddingVertical: 10, borderRadius: 6, alignItems: 'center' },
   closeBtnText: { color: '#8b9bb4', fontSize: 12, fontWeight: '600' },
 });
