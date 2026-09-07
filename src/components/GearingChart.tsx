@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import Svg, { Line, Text as SvgText, Rect } from 'react-native-svg';
 
 interface GearingChartProps {
@@ -11,7 +11,7 @@ interface GearingChartProps {
   units: 'metric' | 'imperial';
 }
 
-const GEAR_COLORS = ['#00e5ff', '#39d353', '#e3b341', '#f0883e', '#ff007a', '#79c0ff', '#d2a8ff', '#56d364'];
+const GEAR_COLORS = ['#00e5ff', '#39d353', '#e3b341', '#f0883e', '#ff007a', '#79c0ff', '#d2a8ff', '#56d364', '#f778ba', '#7ee787'];
 
 export const GearingChart: React.FC<GearingChartProps> = ({
   gearRatios,
@@ -21,8 +21,8 @@ export const GearingChart: React.FC<GearingChartProps> = ({
   targetSpeed,
   units,
 }) => {
-  const screenWidth = Dimensions.get('window').width - 48;
-  const width = Math.max(screenWidth, 300);
+  const { width: windowWidth } = useWindowDimensions();
+  const width = Math.max(windowWidth - 48, 280);
   const height = 200;
 
   const padLeft = 45;
@@ -32,7 +32,13 @@ export const GearingChart: React.FC<GearingChartProps> = ({
 
   const graphW = width - padLeft - padRight;
   const graphH = height - padTop - padBottom;
-  const maxDisplaySpeed = targetSpeed * 1.15;
+
+  const safeTargetSpeed = targetSpeed > 0 && !isNaN(targetSpeed) ? targetSpeed : 260;
+  const safeRedline = redlineRpm > 0 && !isNaN(redlineRpm) ? redlineRpm : 7500;
+  const safeFD = finalDrive > 0 && !isNaN(finalDrive) ? finalDrive : 3.5;
+  const safeCirc = driveCircumferenceM > 0 && !isNaN(driveCircumferenceM) ? driveCircumferenceM : 2.0;
+
+  const maxDisplaySpeed = safeTargetSpeed * 1.15;
 
   return (
     <View style={styles.container}>
@@ -43,7 +49,7 @@ export const GearingChart: React.FC<GearingChartProps> = ({
         {/* Y Grid Lines (RPM) */}
         {[0, 0.33, 0.66, 1].map((p, idx) => {
           const y = padTop + graphH - p * graphH;
-          const rpmVal = Math.round(p * redlineRpm);
+          const rpmVal = Math.round(p * safeRedline);
           return (
             <React.Fragment key={`rpm-${idx}`}>
               <Line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#1b2333" strokeWidth="1" />
@@ -70,13 +76,20 @@ export const GearingChart: React.FC<GearingChartProps> = ({
 
         {/* Gear Lines */}
         {gearRatios.map((ratio, idx) => {
-          const totalRatio = ratio * finalDrive;
-          const maxSpeedKmh = ((redlineRpm / totalRatio) * driveCircumferenceM * 60) / 1000;
-          const maxSpeedDisplay = units === 'imperial' ? maxSpeedKmh / 1.60934 : maxSpeedKmh;
+          if (!ratio || isNaN(ratio) || ratio <= 0) return null;
+          const totalRatio = ratio * safeFD;
+          if (totalRatio <= 0) return null;
+
+          const maxSpeedKmh = ((safeRedline / totalRatio) * safeCirc * 60) / 1000;
+          const rawSpeed = units === 'imperial' ? maxSpeedKmh / 1.60934 : maxSpeedKmh;
+          const maxSpeedDisplay = isNaN(rawSpeed) || rawSpeed <= 0 ? 1 : rawSpeed;
 
           const startX = padLeft;
           const startY = padTop + graphH;
-          const endX = Math.min(padLeft + (maxSpeedDisplay / maxDisplaySpeed) * graphW, width - padRight);
+          const endX = Math.min(
+            padLeft + (maxSpeedDisplay / Math.max(1, maxDisplaySpeed)) * graphW,
+            width - padRight
+          );
           const endY = padTop;
 
           const color = GEAR_COLORS[idx % GEAR_COLORS.length];
