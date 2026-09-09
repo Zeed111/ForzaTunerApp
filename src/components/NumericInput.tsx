@@ -83,18 +83,18 @@ export const NumericInput: React.FC<NumericInputProps> = ({
       onFocus={() => setIsFocused(true)}
       onBlur={handleBlur}
       keyboardType="decimal-pad"
-      placeholderTextColor="#63738a"
+      placeholderTextColor="#64748b"
     />
   );
 };
 
 const styles = StyleSheet.create({
   input: {
-    backgroundColor: '#0b0e17',
+    backgroundColor: '#070a10',
     borderWidth: 1,
-    borderColor: '#232b3b',
+    borderColor: '#1e2638',
     borderRadius: 6,
-    color: '#f0f6fc',
+    color: '#f8fafc',
     paddingHorizontal: 8,
     paddingVertical: 6,
     fontSize: 13,

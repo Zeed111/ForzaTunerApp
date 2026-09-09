@@ -11,7 +11,7 @@ interface GearingChartProps {
   units: 'metric' | 'imperial';
 }
 
-const GEAR_COLORS = ['#00e5ff', '#39d353', '#e3b341', '#f0883e', '#ff007a', '#79c0ff', '#d2a8ff', '#56d364', '#f778ba', '#7ee787'];
+const GEAR_COLORS = ['#ff1744', '#00f0ff', '#ffd000', '#00ff9d', '#d946ef', '#ff7b00', '#38bdf8', '#a78bfa', '#f43f5e', '#4ade80'];
 
 export const GearingChart: React.FC<GearingChartProps> = ({
   gearRatios,
@@ -44,7 +44,7 @@ export const GearingChart: React.FC<GearingChartProps> = ({
     <View style={styles.container}>
       <Svg width={width} height={height}>
         {/* Background */}
-        <Rect width={width} height={height} fill="#0b0e17" rx={8} />
+        <Rect width={width} height={height} fill="#070a10" rx={8} />
 
         {/* Y Grid Lines (RPM) */}
         {[0, 0.33, 0.66, 1].map((p, idx) => {
@@ -52,8 +52,8 @@ export const GearingChart: React.FC<GearingChartProps> = ({
           const rpmVal = Math.round(p * safeRedline);
           return (
             <React.Fragment key={`rpm-${idx}`}>
-              <Line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#1b2333" strokeWidth="1" />
-              <SvgText x={padLeft - 6} y={y + 4} fill="#63738a" fontSize="9" textAnchor="end">
+              <Line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#161f30" strokeWidth="1" />
+              <SvgText x={padLeft - 6} y={y + 4} fill="#8a99ad" fontSize="9" textAnchor="end">
                 {rpmVal >= 1000 ? `${(rpmVal / 1000).toFixed(0)}k` : rpmVal}
               </SvgText>
             </React.Fragment>
@@ -66,8 +66,8 @@ export const GearingChart: React.FC<GearingChartProps> = ({
           const spd = Math.round(p * maxDisplaySpeed);
           return (
             <React.Fragment key={`spd-${idx}`}>
-              <Line x1={x} y1={padTop} x2={x} y2={padTop + graphH} stroke="#1b2333" strokeWidth="1" />
-              <SvgText x={x} y={height - 8} fill="#63738a" fontSize="9" textAnchor="middle">
+              <Line x1={x} y1={padTop} x2={x} y2={padTop + graphH} stroke="#161f30" strokeWidth="1" />
+              <SvgText x={x} y={height - 8} fill="#8a99ad" fontSize="9" textAnchor="middle">
                 {spd}
               </SvgText>
             </React.Fragment>
@@ -115,6 +115,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#232b3b',
+    borderColor: '#1c2438',
   },
 });

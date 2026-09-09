@@ -209,7 +209,7 @@ export default function App() {
   return (
     <SafeAreaProvider style={styles.provider}>
       <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0d14" translucent={false} />
+      <StatusBar barStyle="light-content" backgroundColor="#070a10" translucent={false} />
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
@@ -238,10 +238,10 @@ export default function App() {
           </View>
           <View style={styles.actionRow}>
             <TouchableOpacity
-              style={[styles.presetBtn, { backgroundColor: '#1a2f4c', borderColor: '#2b5080' }]}
+              style={[styles.presetBtn, { backgroundColor: '#0e1c2c', borderColor: '#173452' }]}
               onPress={() => setCarModalVisible(true)}
             >
-              <Text style={[styles.presetBtnText, { color: '#00e5ff' }]}>{t('cars')}</Text>
+              <Text style={[styles.presetBtnText, { color: '#00f0ff' }]}>{t('cars')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.presetBtn} onPress={() => setPresetModalVisible(true)}>
               <Text style={styles.presetBtnText}>{t('garage')}</Text>
@@ -304,18 +304,18 @@ export default function App() {
             <View style={styles.col}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <Text style={styles.label}>{t('power')}</Text>
-                <View style={{ flexDirection: 'row', backgroundColor: '#0b0e17', borderRadius: 4, padding: 1, borderWidth: 1, borderColor: '#232b3b' }}>
+                <View style={{ flexDirection: 'row', backgroundColor: '#070a10', borderRadius: 4, padding: 1, borderWidth: 1, borderColor: '#1e2638' }}>
                   <TouchableOpacity
-                    style={[{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }, powerUnit === 'hp' && { backgroundColor: '#00e5ff' }]}
+                    style={[{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }, powerUnit === 'hp' && { backgroundColor: '#ff1744' }]}
                     onPress={() => setPowerUnit('hp')}
                   >
-                    <Text style={[{ fontSize: 9, fontWeight: '700', color: '#8b9bb4' }, powerUnit === 'hp' && { color: '#0a0d14' }]}>{t('hpUnit')}</Text>
+                    <Text style={[{ fontSize: 9, fontWeight: '700', color: '#8a99ad' }, powerUnit === 'hp' && { color: '#ffffff' }]}>{t('hpUnit')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }, powerUnit === 'ps' && { backgroundColor: '#00e5ff' }]}
+                    style={[{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }, powerUnit === 'ps' && { backgroundColor: '#ff1744' }]}
                     onPress={() => setPowerUnit('ps')}
                   >
-                    <Text style={[{ fontSize: 9, fontWeight: '700', color: '#8b9bb4' }, powerUnit === 'ps' && { color: '#0a0d14' }]}>{t('psUnit')}</Text>
+                    <Text style={[{ fontSize: 9, fontWeight: '700', color: '#8a99ad' }, powerUnit === 'ps' && { color: '#ffffff' }]}>{t('psUnit')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -325,7 +325,7 @@ export default function App() {
                 max={3000}
                 onValueChange={v => updateNumeric('hp', powerUnit === 'ps' ? psToHp(v) : v)}
               />
-              <Text style={{ fontSize: 9, color: '#63738a', marginTop: 2 }}>
+              <Text style={{ fontSize: 9, color: '#64748b', marginTop: 2 }}>
                 {powerUnit === 'ps' ? t('approxHp', { val: inputs.hp }) : t('approxPs', { val: Math.round(hpToPs(inputs.hp)) })}
               </Text>
             </View>
@@ -776,61 +776,61 @@ export default function App() {
 const styles = StyleSheet.create({
   provider: {
     flex: 1,
-    backgroundColor: '#0a0d14',
+    backgroundColor: '#070a10',
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#0a0d14',
+    backgroundColor: '#070a10',
   },
   container: { padding: 14, paddingBottom: 60 },
   header: { alignItems: 'center', marginBottom: 14, marginTop: 4 },
-  title: { fontSize: 22, fontWeight: '800', color: '#f0f6fc', letterSpacing: 1 },
-  titleAccent: { color: '#ff007a' },
-  subtitle: { fontSize: 11, color: '#8b9bb4', marginTop: 4 },
+  title: { fontSize: 22, fontWeight: '900', color: '#f8fafc', letterSpacing: 1.5 },
+  titleAccent: { color: '#ff1744' }, // FH6 Torii Crimson
+  subtitle: { fontSize: 11, color: '#94a3b8', marginTop: 4, letterSpacing: 0.5 },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  pillGroup: { flexDirection: 'row', backgroundColor: '#141923', borderRadius: 8, padding: 3, borderWidth: 1, borderColor: '#232b3b' },
+  pillGroup: { flexDirection: 'row', backgroundColor: '#0f1420', borderRadius: 8, padding: 3, borderWidth: 1, borderColor: '#1e2638' },
   pillBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
-  pillActive: { backgroundColor: '#ff007a' },
-  pillText: { color: '#8b9bb4', fontSize: 12, fontWeight: '600' },
-  pillTextActive: { color: '#fff' },
+  pillActive: { backgroundColor: '#ff1744' },
+  pillText: { color: '#8a99ad', fontSize: 12, fontWeight: '700' },
+  pillTextActive: { color: '#ffffff' },
   actionRow: { flexDirection: 'row', gap: 6 },
-  presetBtn: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#1f3a2b', borderRadius: 6, borderWidth: 1, borderColor: '#2e6244' },
-  presetBtnText: { color: '#39d353', fontSize: 12, fontWeight: '600' },
-  resetBtn: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#3b141b', borderRadius: 6, borderWidth: 1, borderColor: '#63222d' },
-  resetBtnText: { color: '#ff6b81', fontSize: 12, fontWeight: '600' },
-  card: { backgroundColor: '#141923', borderWidth: 1, borderColor: '#232b3b', borderRadius: 12, padding: 14, marginBottom: 14 },
-  cardTitle: { fontSize: 13, fontWeight: '700', color: '#00e5ff', textTransform: 'uppercase', marginBottom: 8 },
-  cardTitleAccent: { fontSize: 13, fontWeight: '700', color: '#ff007a', textTransform: 'uppercase', marginBottom: 8 },
-  label: { fontSize: 11, color: '#8b9bb4', marginBottom: 4, fontWeight: '500' },
-  badgeInfo: { fontSize: 10, color: '#00e5ff', marginTop: 3, fontStyle: 'italic' },
+  presetBtn: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#1a1024', borderRadius: 6, borderWidth: 1, borderColor: '#3b1c54' },
+  presetBtnText: { color: '#d946ef', fontSize: 12, fontWeight: '700' },
+  resetBtn: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#280d14', borderRadius: 6, borderWidth: 1, borderColor: '#521524' },
+  resetBtnText: { color: '#ff4d6d', fontSize: 12, fontWeight: '700' },
+  card: { backgroundColor: '#0f1420', borderWidth: 1, borderColor: '#1c2438', borderRadius: 12, padding: 14, marginBottom: 14 },
+  cardTitle: { fontSize: 13, fontWeight: '800', color: '#00f0ff', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 },
+  cardTitleAccent: { fontSize: 13, fontWeight: '800', color: '#ff1744', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 },
+  label: { fontSize: 11, color: '#94a3b8', marginBottom: 4, fontWeight: '600' },
+  badgeInfo: { fontSize: 10, color: '#00f0ff', marginTop: 3, fontStyle: 'italic', fontWeight: '500' },
   pillGroupFull: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
-  subPill: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#0b0e17', borderRadius: 6, borderWidth: 1, borderColor: '#232b3b' },
-  subPillActive: { backgroundColor: '#00e5ff', borderColor: '#00e5ff' },
-  subPillText: { color: '#8b9bb4', fontSize: 11, fontWeight: '600' },
-  subPillTextActive: { color: '#0a0d14' },
+  subPill: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#070a10', borderRadius: 6, borderWidth: 1, borderColor: '#1e2638' },
+  subPillActive: { backgroundColor: '#ff1744', borderColor: '#ff1744' },
+  subPillText: { color: '#8a99ad', fontSize: 11, fontWeight: '700' },
+  subPillTextActive: { color: '#ffffff' },
   row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   rowTight: { flexDirection: 'row', gap: 4, flex: 1 },
   col: { flex: 1 },
-  input: { backgroundColor: '#0b0e17', borderWidth: 1, borderColor: '#232b3b', borderRadius: 6, color: '#f0f6fc', paddingHorizontal: 8, paddingVertical: 6, fontSize: 13 },
+  input: { backgroundColor: '#070a10', borderWidth: 1, borderColor: '#1e2638', borderRadius: 6, color: '#f8fafc', paddingHorizontal: 8, paddingVertical: 6, fontSize: 13 },
   inputHalf: { flex: 1 },
-  sectionDivider: { fontSize: 11, fontWeight: '700', color: '#f0f6fc', marginTop: 8, marginBottom: 8, borderTopWidth: 1, borderTopColor: '#232b3b', paddingTop: 8 },
-  outputRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#1a2233' },
-  outLabel: { color: '#8b9bb4', fontSize: 12 },
-  outVal: { color: '#39d353', fontWeight: '700', fontSize: 12 },
+  sectionDivider: { fontSize: 11, fontWeight: '800', color: '#f8fafc', marginTop: 8, marginBottom: 8, borderTopWidth: 1, borderTopColor: '#1c2438', paddingTop: 8, letterSpacing: 0.5 },
+  outputRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#151c2d' },
+  outLabel: { color: '#94a3b8', fontSize: 12, fontWeight: '500' },
+  outVal: { color: '#00ff9d', fontWeight: '800', fontSize: 12 },
   gearsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 8 },
-  gearPill: { backgroundColor: '#0b0e17', borderWidth: 1, borderColor: '#232b3b', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, alignItems: 'center' },
-  gearLabel: { fontSize: 9, color: '#8b9bb4' },
-  gearVal: { fontSize: 12, fontWeight: '700', color: '#39d353' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { width: '100%', maxWidth: 500, backgroundColor: '#141923', borderWidth: 1, borderColor: '#232b3b', borderRadius: 12, padding: 18 },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: '#00e5ff', textTransform: 'uppercase', marginBottom: 12 },
+  gearPill: { backgroundColor: '#070a10', borderWidth: 1, borderColor: '#1e2638', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, alignItems: 'center' },
+  gearLabel: { fontSize: 9, color: '#8a99ad', fontWeight: '600' },
+  gearVal: { fontSize: 12, fontWeight: '800', color: '#00ff9d' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(5,7,12,0.88)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', maxWidth: 500, backgroundColor: '#0f1420', borderWidth: 1, borderColor: '#1c2438', borderRadius: 12, padding: 18 },
+  modalTitle: { fontSize: 16, fontWeight: '900', color: '#ff1744', textTransform: 'uppercase', marginBottom: 12, letterSpacing: 1 },
   saveRow: { flexDirection: 'row', gap: 8 },
-  saveActionBtn: { backgroundColor: '#1f3a2b', borderWidth: 1, borderColor: '#2e6244', paddingHorizontal: 14, justifyContent: 'center', borderRadius: 6 },
-  saveActionBtnText: { color: '#39d353', fontWeight: '700', fontSize: 12 },
-  emptyText: { color: '#63738a', fontSize: 12, fontStyle: 'italic', marginVertical: 8 },
-  presetItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#232b3b' },
-  presetItemText: { color: '#f0f6fc', fontSize: 13, fontWeight: '600' },
-  deleteBtnText: { color: '#ff6b81', fontSize: 11, fontWeight: '600' },
-  closeBtn: { marginTop: 14, backgroundColor: '#0b0e17', borderWidth: 1, borderColor: '#232b3b', paddingVertical: 8, borderRadius: 6, alignItems: 'center' },
-  closeBtnText: { color: '#8b9bb4', fontSize: 12, fontWeight: '600' },
+  saveActionBtn: { backgroundColor: '#ff1744', borderWidth: 1, borderColor: '#ff1744', paddingHorizontal: 14, justifyContent: 'center', borderRadius: 6 },
+  saveActionBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 12 },
+  emptyText: { color: '#64748b', fontSize: 12, fontStyle: 'italic', marginVertical: 8 },
+  presetItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#1c2438' },
+  presetItemText: { color: '#f8fafc', fontSize: 13, fontWeight: '700' },
+  deleteBtnText: { color: '#ff4d6d', fontSize: 11, fontWeight: '700' },
+  closeBtn: { marginTop: 14, backgroundColor: '#070a10', borderWidth: 1, borderColor: '#1e2638', paddingVertical: 8, borderRadius: 6, alignItems: 'center' },
+  closeBtnText: { color: '#94a3b8', fontSize: 12, fontWeight: '600' },
 });

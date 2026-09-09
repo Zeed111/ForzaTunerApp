@@ -25,23 +25,23 @@ export interface CarSelectorModalProps {
 export function getPiColor(piClass?: string): string {
   switch (piClass?.toUpperCase()) {
     case 'X':
-      return '#2ecc71'; // Neon Green (999+)
+      return '#00ff9d'; // FH6 Nitro Green (999+)
     case 'R':
-      return '#00e5ff'; // Cyan / Teal (901-998 Race / Motorsport)
+      return '#00f0ff'; // Tokyo Neon Cyan (901-998 Race)
     case 'S2':
-      return '#8e44ad'; // Deep Purple (801-900)
+      return '#9d4edd'; // Deep Violet (801-900)
     case 'S1':
-      return '#9b59b6'; // Light Purple (701-800)
+      return '#c77dff'; // Sakura Lavender (701-800)
     case 'A':
-      return '#e74c3c'; // Red (601-700)
+      return '#ff1744'; // Torii Red (601-700)
     case 'B':
-      return '#e67e22'; // Orange (501-600)
+      return '#ff7b00'; // Neon Sunset (501-600)
     case 'C':
-      return '#f1c40f'; // Yellow (401-500)
+      return '#ffd000'; // Shinjuku Gold (401-500)
     case 'D':
-      return '#3498db'; // Blue (100-400)
+      return '#00b4d8'; // Skyline Blue (100-400)
     default:
-      return '#e74c3c';
+      return '#ff1744';
   }
 }
 
@@ -141,20 +141,20 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  modalContent: { width: '100%', maxWidth: 500, backgroundColor: '#141923', borderWidth: 1, borderColor: '#232b3b', borderRadius: 12, padding: 16 },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: '#00e5ff', textTransform: 'uppercase', marginBottom: 10 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(5,7,12,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16 },
+  modalContent: { width: '100%', maxWidth: 500, backgroundColor: '#0f1420', borderWidth: 1, borderColor: '#1c2438', borderRadius: 12, padding: 16 },
+  modalTitle: { fontSize: 16, fontWeight: '900', color: '#ff1744', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 1 },
   searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, position: 'relative' },
-  searchInput: { flex: 1, backgroundColor: '#0b0e17', borderWidth: 1, borderColor: '#232b3b', borderRadius: 6, color: '#f0f6fc', paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, paddingRight: 36 },
+  searchInput: { flex: 1, backgroundColor: '#070a10', borderWidth: 1, borderColor: '#1e2638', borderRadius: 6, color: '#f8fafc', paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, paddingRight: 36 },
   clearSearchBtn: { position: 'absolute', right: 10, padding: 4 },
-  clearSearchText: { color: '#8b9bb4', fontSize: 14, fontWeight: 'bold' },
-  carItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#232b3b' },
-  carName: { color: '#f0f6fc', fontSize: 13, fontWeight: '700' },
-  carMeta: { color: '#8b9bb4', fontSize: 11, marginTop: 2 },
+  clearSearchText: { color: '#94a3b8', fontSize: 14, fontWeight: 'bold' },
+  carItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#1c2438' },
+  carName: { color: '#f8fafc', fontSize: 13, fontWeight: '700' },
+  carMeta: { color: '#8a99ad', fontSize: 11, marginTop: 2 },
   piBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, minWidth: 28, alignItems: 'center' },
-  piBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  piBadgeText: { color: '#ffffff', fontSize: 11, fontWeight: '900' },
   emptyContainer: { paddingVertical: 30, alignItems: 'center' },
-  emptyText: { color: '#63738a', fontSize: 13, fontStyle: 'italic' },
-  closeBtn: { marginTop: 12, backgroundColor: '#0b0e17', borderWidth: 1, borderColor: '#232b3b', paddingVertical: 10, borderRadius: 6, alignItems: 'center' },
-  closeBtnText: { color: '#8b9bb4', fontSize: 12, fontWeight: '600' },
+  emptyText: { color: '#64748b', fontSize: 13, fontStyle: 'italic' },
+  closeBtn: { marginTop: 12, backgroundColor: '#070a10', borderWidth: 1, borderColor: '#1e2638', paddingVertical: 10, borderRadius: 6, alignItems: 'center' },
+  closeBtnText: { color: '#ff4d6d', fontSize: 12, fontWeight: '700' },
 });
