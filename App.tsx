@@ -13,7 +13,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   VehicleInputs,
@@ -207,7 +207,8 @@ export default function App() {
   const isImp = inputs.units === 'imperial';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaProvider style={styles.provider}>
+      <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0d14" translucent={false} />
       <ScrollView
         contentContainerStyle={styles.container}
@@ -768,10 +769,15 @@ export default function App() {
         </Modal>
       </ScrollView>
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  provider: {
+    flex: 1,
+    backgroundColor: '#0a0d14',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#0a0d14',
