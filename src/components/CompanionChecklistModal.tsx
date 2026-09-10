@@ -58,6 +58,7 @@ export const CompanionChecklistModal: React.FC<CompanionChecklistModalProps> = (
       category: '2. GEARING',
       label: 'Final Drive',
       value: tune.finalDrive,
+      subValue: `Aero Top Speed: ${tune.estimatedTopSpeed}`,
     },
     ...tune.gearRatios.map((r, i) => ({
       id: `gear_${i + 1}`,

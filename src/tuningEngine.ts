@@ -86,6 +86,9 @@ export interface TuneResult {
   driveCircumferenceM: number;
   redlineRpm: number;
   targetSpeedDisplay: number;
+  estimatedTopSpeed: string;
+  estimatedTopSpeedKm: number;
+  aeroDragNote?: string;
 }
 
 function clamp(val: number, min: number, max: number): number {
@@ -471,15 +474,6 @@ export function calculateTune(car: VehicleInputs): TuneResult {
 
   const hF = hFMin + (hFMax - hFMin) * hRatioF;
   const hR = hRMin + (hRMax - hRMin) * hRatioR;
-  } else if (car.discipline === 'drag') {
-    aeroF = aeroFMin;
-    aeroR = aeroRMin;
-  } else {
-    // Grip
-    const baseGrip = car.category === 'track' ? 0.85 : 0.60;
-    aeroF = aeroFMin + (aeroFMax - aeroFMin) * clamp(baseGrip * (fw / 0.5), 0.15, 0.95);
-    aeroR = aeroRMin + (aeroRMax - aeroRMin) * clamp(baseGrip * (rw / 0.5) * 1.08, 0.15, 0.95);
-  }
 
   // 6. Differentials - Distinctly scaled by horsepower and drivetrain
   let dFAcc = 0, dFDec = 0, dRAcc = 0, dRDec = 0, dCenter = 'N/A';
@@ -552,10 +546,43 @@ export function calculateTune(car: VehicleInputs): TuneResult {
   const brakeBalance = clamp(Math.round(50 + (fw - 0.5) * 10 + (car.category === 'track' ? 1 : 0)), 47, 55);
   const brakePressure = car.discipline === 'drift' ? 130 : car.category === 'track' ? 115 : 100;
 
-  // 8. Transmission Ratios
+  // 8. Transmission Ratios & Aerodynamic Drag Analysis
+  let cdA = 0.72; // default sports coupe / JDM
+  if (car.category === 'supercar') cdA = 0.62;
+  else if (car.category === 'track') cdA = 0.82;
+  else if (car.category === 'classic') cdA = 0.88;
+  if (car.discipline === 'offroad') cdA = 1.25;
+  else if (car.discipline === 'dirt') cdA = 0.95;
+
+  // Additional aero drag from wing downforce setting
+  if (aeroRMax > 50) {
+    const aeroDragRatio = (aeroR - aeroRMin) / (aeroRMax - aeroRMin + 1);
+    cdA += aeroDragRatio * 0.18;
+  }
+
+  // Aerodynamic terminal velocity estimation: P_wheel = 0.5 * rho * CdA * v^3
+  const drivetrainEff = car.drivetrain === 'AWD' ? 0.82 : 0.85;
+  const wheelPowerWatts = safeHp * 745.7 * drivetrainEff;
+  const airDensity = 1.225; // kg/m^3 at sea level
+  const vTerminalMs = Math.pow(wheelPowerWatts / (0.5 * airDensity * cdA), 1 / 3);
+  const vTerminalKmh = Math.round(vTerminalMs * 3.6);
+  // Practical limit allowing for tailwinds, slipstream, and downhill
+  const practicalMaxKmh = Math.round(vTerminalKmh * 1.08);
+
   const rawTopSpeed = car.topSpeed > 0 ? car.topSpeed : (isImp ? 160 : 260);
   const topSpeedKm = clamp(isImp ? rawTopSpeed * 1.60934 : rawTopSpeed, 80, 520);
-  const speedMs = (topSpeedKm * 1000) / 3600;
+
+  let aeroDragNote: string | undefined;
+  let effectiveTopSpeedKm = topSpeedKm;
+
+  if (topSpeedKm > practicalMaxKmh + 20) {
+    effectiveTopSpeedKm = practicalMaxKmh;
+    const estDisplay = isImp ? `${Math.round(vTerminalKmh / 1.60934)} mph` : `${vTerminalKmh} km/h`;
+    const targetDisplay = isImp ? `${Math.round(topSpeedKm / 1.60934)} mph` : `${Math.round(topSpeedKm)} km/h`;
+    aeroDragNote = `Target speed (${targetDisplay}) exceeds ${safeHp} HP aerodynamic limit (~${estDisplay}). Gearing optimized for peak attainable speed.`;
+  }
+
+  const speedMs = (effectiveTopSpeedKm * 1000) / 3600;
   const wheelRpmAtTopSpeed = Math.max(10, (speedMs / Math.max(0.5, driveCircumferenceM)) * 60);
 
   const isEv = car.engineType === 'ev' || car.numGears === 1;
@@ -563,11 +590,44 @@ export function calculateTune(car: VehicleInputs): TuneResult {
   const defaultRedline = isEv ? 16000 : 7500;
   const safeRedline = clamp(car.redlineRpm || defaultRedline, 2000, maxRedline);
 
+  // 1st Gear Launch Traction Optimization:
+  // High HP RWD spins violently; lengthen 1st gear to allow tires to hook up
+  const ptw = powerToWeightTon;
+  let launchGripFactor = 1.0;
+  if (car.drivetrain === 'RWD') {
+    if (ptw > 320) {
+      launchGripFactor = clamp(1.0 - (ptw - 320) * 0.00045, 0.78, 1.0);
+    }
+  } else if (car.drivetrain === 'FWD') {
+    if (ptw > 250) {
+      launchGripFactor = clamp(1.0 - (ptw - 250) * 0.00035, 0.82, 1.0);
+    }
+  } else if (car.drivetrain === 'AWD') {
+    launchGripFactor = clamp(1.0 + (ptw > 350 ? 0.06 : 0), 1.0, 1.08);
+  }
+
+  // Wider rear tires increase traction threshold
+  const widthLaunchBonus = clamp((widthR - 245) * 0.0006, -0.04, 0.06);
+  launchGripFactor += widthLaunchBonus;
+
   let gTop = car.discipline === 'drag' ? 0.90 : car.discipline === 'drift' ? 0.82 : 0.74;
-  let g1 = car.discipline === 'drag' ? 2.65 : car.discipline === 'offroad' ? 3.85 : car.discipline === 'drift' ? 3.10 : 3.35;
-  if (car.engineType === 'torque') { g1 *= 0.90; gTop *= 0.92; }
-  if (car.engineType === 'highrev') { g1 *= 1.10; gTop *= 1.05; }
-  if (car.engineType === 'ev') { g1 = 2.40; gTop = 0.80; }
+  let g1 = (car.discipline === 'drag' ? 2.65 : car.discipline === 'offroad' ? 3.90 : car.discipline === 'drift' ? 3.10 : 3.35) * launchGripFactor;
+
+  // Powerband Shift-Drop Progression Exponent
+  let curveExponent = 0.86;
+  if (car.engineType === 'torque') {
+    g1 *= 0.90;
+    gTop *= 0.92;
+    curveExponent = 0.78; // wider steps riding broad low-end torque
+  } else if (car.engineType === 'highrev') {
+    g1 *= 1.10;
+    gTop *= 1.05;
+    curveExponent = 0.94; // tight steps keeping engine above VTEC/crossover
+  } else if (car.engineType === 'ev') {
+    g1 = 2.40;
+    gTop = 0.80;
+    curveExponent = 0.86;
+  }
 
   const numGears = clamp(Math.round(car.numGears || (isEv ? 1 : 6)), 1, 10);
   const gearRatios: number[] = [];
@@ -591,11 +651,15 @@ export function calculateTune(car: VehicleInputs): TuneResult {
   } else {
     for (let i = 1; i <= numGears; i++) {
       const t = (i - 1) / (numGears - 1);
-      const ratio = Number((g1 * Math.pow(gTop / g1, Math.pow(t, 0.86))).toFixed(2));
+      const ratio = Number((g1 * Math.pow(gTop / g1, Math.pow(t, curveExponent))).toFixed(2));
       gearRatios.push(ratio);
     }
     calculatedFD = clamp(safeRedline / (wheelRpmAtTopSpeed * gTop), 2.20, 6.20);
   }
+
+  const estSpeedDisplay = isImp
+    ? `${Math.round(vTerminalKmh / 1.60934)} mph`
+    : `${vTerminalKmh} km/h`;
 
   return {
     tireFront: isImp ? `${(coldBarF * 14.5038).toFixed(1)} PSI` : `${coldBarF.toFixed(2)} bar`,
@@ -632,5 +696,8 @@ export function calculateTune(car: VehicleInputs): TuneResult {
     driveCircumferenceM,
     redlineRpm: safeRedline,
     targetSpeedDisplay: rawTopSpeed,
+    estimatedTopSpeed: estSpeedDisplay,
+    estimatedTopSpeedKm: vTerminalKmh,
+    aeroDragNote,
   };
 }

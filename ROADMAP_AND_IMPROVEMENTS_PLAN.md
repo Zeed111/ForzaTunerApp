@@ -106,10 +106,10 @@ This roadmap outlines targeted engineering improvements for **Forza Pro Tuner**,
 
 ## Prioritized Implementation Phasing
 
-| Phase | Focus Area | Key Deliverables | Estimated Scope |
+| Phase | Focus Area | Key Deliverables | Status |
 | :--- | :--- | :--- | :--- |
-| **Phase 1** | **Core Calculation Upgrades** | • Tire Compound selector & thermal pressures<br>• Dynamic Aero-Spring compensation<br>• Handling Bias slider (`-5` to `+5`) | Fast / High Impact (Completed) |
-| **Phase 2** | **Tune Doctor & Workflow** | • Interactive "Tune Doctor" symptom troubleshooter modal<br>• In-Game step-by-step checklist mode | Medium / High Value |
-| **Phase 3** | **Gearing & Physics Refinement** | • Shift-drop powerband matching<br>• 1st gear launch traction optimization<br>• Theoretical aerodynamic top-speed validation | Medium |
+| **Phase 1** | **Core Calculation Upgrades** | • Tire Compound selector & thermal pressures<br>• Dynamic Aero-Spring compensation<br>• Handling Bias slider (`-5` to `+5`) | ✅ Completed |
+| **Phase 2** | **Tune Doctor & Workflow** | • Interactive "Tune Doctor" symptom troubleshooter modal<br>• In-Game step-by-step checklist mode matching garage tabs | ✅ Completed |
+| **Phase 3** | **Gearing & Physics Refinement** | • Shift-drop powerband matching (`0.78` torque to `0.94` highrev)<br>• 1st gear launch traction optimization<br>• Theoretical aerodynamic top-speed validation & chart limit indicator | ✅ Completed |
 
 

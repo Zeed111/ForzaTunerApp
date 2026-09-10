@@ -139,6 +139,8 @@ export const translations = {
     centerDiffBias: 'Center Differential Bias:',
     gearingTransmission: 'Gearing & Transmission',
     calculatedFinalDrive: 'Calculated Final Drive:',
+    estimatedAeroTopSpeed: 'Estimated Aero Top Speed:',
+    aeroDragAdvisory: 'Aero Drag Advisory',
     gearPrefix: 'G{{num}}',
 
     // Garage Modal

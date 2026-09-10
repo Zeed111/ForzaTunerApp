@@ -9,6 +9,7 @@ interface GearingChartProps {
   driveCircumferenceM: number;
   targetSpeed: number;
   units: 'metric' | 'imperial';
+  estimatedTopSpeedKm?: number;
 }
 
 const GEAR_COLORS = ['#ff1744', '#00f0ff', '#ffd000', '#00ff9d', '#d946ef', '#ff7b00', '#38bdf8', '#a78bfa', '#f43f5e', '#4ade80'];
@@ -20,6 +21,7 @@ export const GearingChart: React.FC<GearingChartProps> = ({
   driveCircumferenceM,
   targetSpeed,
   units,
+  estimatedTopSpeedKm,
 }) => {
   const { width: windowWidth } = useWindowDimensions();
   const [containerWidth, setContainerWidth] = React.useState<number>(0);
@@ -112,6 +114,36 @@ export const GearingChart: React.FC<GearingChartProps> = ({
             </React.Fragment>
           );
         })}
+
+        {/* Aerodynamic Drag Terminal Velocity Limit */}
+        {estimatedTopSpeedKm && estimatedTopSpeedKm > 0 && (() => {
+          const rawAeroSpeed = units === 'imperial' ? estimatedTopSpeedKm / 1.60934 : estimatedTopSpeedKm;
+          const aeroX = padLeft + (rawAeroSpeed / Math.max(1, maxDisplaySpeed)) * graphW;
+          if (aeroX < padLeft || aeroX > width - padRight) return null;
+          return (
+            <React.Fragment key="aero-limit-line">
+              <Line
+                x1={aeroX}
+                y1={padTop}
+                x2={aeroX}
+                y2={padTop + graphH}
+                stroke="#00f0ff"
+                strokeWidth="1.5"
+                strokeDasharray="4, 3"
+              />
+              <SvgText
+                x={Math.min(aeroX, width - padRight - 28)}
+                y={padTop + 10}
+                fill="#00f0ff"
+                fontSize="8"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                Aero Limit
+              </SvgText>
+            </React.Fragment>
+          );
+        })()}
       </Svg>
     </View>
   );

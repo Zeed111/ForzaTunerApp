@@ -810,6 +810,17 @@ export default function App() {
             <Text style={styles.outLabel}>{t('calculatedFinalDrive')}</Text>
             <Text style={styles.outVal}>{tune.finalDrive}</Text>
           </View>
+          <View style={styles.outputRow}>
+            <Text style={styles.outLabel}>{t('estimatedAeroTopSpeed')}</Text>
+            <Text style={[styles.outVal, { color: '#00f0ff' }]}>{tune.estimatedTopSpeed}</Text>
+          </View>
+
+          {tune.aeroDragNote && (
+            <View style={styles.aeroAdvisoryCard}>
+              <Text style={styles.aeroAdvisoryTitle}>⚠️ {t('aeroDragAdvisory')}</Text>
+              <Text style={styles.aeroAdvisoryText}>{tune.aeroDragNote}</Text>
+            </View>
+          )}
 
           <View style={styles.gearsGrid}>
             {tune.gearRatios.map((ratio, idx) => (
@@ -827,6 +838,7 @@ export default function App() {
             driveCircumferenceM={tune.driveCircumferenceM}
             targetSpeed={tune.targetSpeedDisplay}
             units={inputs.units}
+            estimatedTopSpeedKm={tune.estimatedTopSpeedKm}
           />
         </View>
 
@@ -1020,4 +1032,26 @@ const styles = StyleSheet.create({
   biasPillActiveAgile: { backgroundColor: '#590e1c', borderColor: '#ff1744' },
   biasPillText: { color: '#8a99ad', fontSize: 10, fontWeight: '700' },
   biasPillTextActive: { color: '#ffffff' },
+  aeroAdvisoryCard: {
+    backgroundColor: 'rgba(255, 184, 0, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 184, 0, 0.35)',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  aeroAdvisoryTitle: {
+    color: '#ffd000',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  aeroAdvisoryText: {
+    color: '#e2e8f0',
+    fontSize: 11,
+    lineHeight: 16,
+  },
 });
