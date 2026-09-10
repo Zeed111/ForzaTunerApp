@@ -28,6 +28,8 @@ import {
 } from './src/tuningEngine';
 import { GearingChart } from './src/components/GearingChart';
 import { CarSelectorModal } from './src/components/CarSelectorModal';
+import { TuneDoctorModal } from './src/components/TuneDoctorModal';
+import { CompanionChecklistModal } from './src/components/CompanionChecklistModal';
 import { NumericInput } from './src/components/NumericInput';
 import { convertInputsUnitSystem, psToHp, hpToPs } from './src/utils/units';
 import { t } from './src/i18n';
@@ -77,6 +79,8 @@ export default function App() {
   const [tune, setTune] = useState<TuneResult>(() => calculateTune(DEFAULT_INPUTS));
   const [isHydrated, setIsHydrated] = useState(false);
   const [carModalVisible, setCarModalVisible] = useState(false);
+  const [doctorModalVisible, setDoctorModalVisible] = useState(false);
+  const [checklistModalVisible, setChecklistModalVisible] = useState(false);
   const [presetModalVisible, setPresetModalVisible] = useState(false);
   const [presetNameInput, setPresetNameInput] = useState('');
   const [savedPresets, setSavedPresets] = useState<PresetItem[]>([]);
@@ -246,6 +250,18 @@ export default function App() {
               onPress={() => setCarModalVisible(true)}
             >
               <Text style={[styles.presetBtnText, { color: '#00f0ff' }]}>{t('cars')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.presetBtn, { backgroundColor: '#1f132b', borderColor: '#4a195e' }]}
+              onPress={() => setDoctorModalVisible(true)}
+            >
+              <Text style={[styles.presetBtnText, { color: '#d946ef' }]}>{`🩺 ${t('doctor')}`}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.presetBtn, { backgroundColor: '#072419', borderColor: '#0f5238' }]}
+              onPress={() => setChecklistModalVisible(true)}
+            >
+              <Text style={[styles.presetBtnText, { color: '#00ff9d' }]}>{`📋 ${t('checklist')}`}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.presetBtn} onPress={() => setPresetModalVisible(true)}>
               <Text style={styles.presetBtnText}>{t('garage')}</Text>
@@ -822,6 +838,24 @@ export default function App() {
           units={inputs.units}
         />
 
+        {/* TUNE DOCTOR MODAL */}
+        <TuneDoctorModal
+          visible={doctorModalVisible}
+          onClose={() => setDoctorModalVisible(false)}
+          inputs={inputs}
+          onApplyFix={(newInputs: VehicleInputs) => {
+            setInputs(newInputs);
+          }}
+        />
+
+        {/* COMPANION CHECKLIST MODAL */}
+        <CompanionChecklistModal
+          visible={checklistModalVisible}
+          onClose={() => setChecklistModalVisible(false)}
+          tune={tune}
+          inputs={inputs}
+        />
+
         {/* GARAGE PRESET MODAL */}
         <Modal visible={presetModalVisible} animationType="slide" transparent onRequestClose={() => setPresetModalVisible(false)}>
           <KeyboardAvoidingView
@@ -902,17 +936,17 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '900', color: '#f8fafc', letterSpacing: 1.5 },
   titleAccent: { color: '#ff1744' }, // FH6 Torii Crimson
   subtitle: { fontSize: 11, color: '#94a3b8', marginTop: 4, letterSpacing: 0.5 },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 },
   pillGroup: { flexDirection: 'row', backgroundColor: '#0f1420', borderRadius: 8, padding: 3, borderWidth: 1, borderColor: '#1e2638' },
   pillBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
   pillActive: { backgroundColor: '#ff1744' },
   pillText: { color: '#8a99ad', fontSize: 12, fontWeight: '700' },
   pillTextActive: { color: '#ffffff' },
-  actionRow: { flexDirection: 'row', gap: 6 },
-  presetBtn: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#1a1024', borderRadius: 6, borderWidth: 1, borderColor: '#3b1c54' },
-  presetBtnText: { color: '#d946ef', fontSize: 12, fontWeight: '700' },
-  resetBtn: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#280d14', borderRadius: 6, borderWidth: 1, borderColor: '#521524' },
-  resetBtnText: { color: '#ff4d6d', fontSize: 12, fontWeight: '700' },
+  actionRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' },
+  presetBtn: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#1a1024', borderRadius: 6, borderWidth: 1, borderColor: '#3b1c54' },
+  presetBtnText: { color: '#d946ef', fontSize: 11, fontWeight: '700' },
+  resetBtn: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#280d14', borderRadius: 6, borderWidth: 1, borderColor: '#521524' },
+  resetBtnText: { color: '#ff4d6d', fontSize: 11, fontWeight: '700' },
   card: { backgroundColor: '#0f1420', borderWidth: 1, borderColor: '#1c2438', borderRadius: 12, padding: 14, marginBottom: 14 },
   cardTitle: { fontSize: 13, fontWeight: '800', color: '#00f0ff', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 },
   cardTitleAccent: { fontSize: 13, fontWeight: '800', color: '#ff1744', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 },

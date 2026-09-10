@@ -102,17 +102,14 @@ This roadmap outlines targeted engineering improvements for **Forza Pro Tuner**,
   9. Differential (Front / Rear / Center)
 - Each item includes a single-tap **"Copy"** button and interactive checkboxes so players don't miss an item while applying values on console/PC.
 
-### 3. Share & Export Capabilities (Reddit & Discord)
-- **Export to ForzaOpenTunes**: One-tap generation of formatted Reddit/Discord markdown matching the standardized `r/ForzaOpenTunes` template.
-- **Copy Clean Tune Sheet**: Single-click button to copy the entire calculated setup to clipboard for fast sharing.
-
 ---
 
 ## Prioritized Implementation Phasing
 
 | Phase | Focus Area | Key Deliverables | Estimated Scope |
 | :--- | :--- | :--- | :--- |
-| **Phase 1** | **Core Calculation Upgrades** | • Tire Compound selector & thermal pressures<br>• Dynamic Aero-Spring compensation<br>• Handling Bias slider (`-5` to `+5`) | Fast / High Impact |
-| **Phase 2** | **Tune Doctor & Workflow** | • Interactive symptom troubleshooter modal<br>• One-click export to Reddit `r/ForzaOpenTunes`<br>• In-Game step-by-step checklist mode | Medium / High Value |
+| **Phase 1** | **Core Calculation Upgrades** | • Tire Compound selector & thermal pressures<br>• Dynamic Aero-Spring compensation<br>• Handling Bias slider (`-5` to `+5`) | Fast / High Impact (Completed) |
+| **Phase 2** | **Tune Doctor & Workflow** | • Interactive "Tune Doctor" symptom troubleshooter modal<br>• In-Game step-by-step checklist mode | Medium / High Value |
 | **Phase 3** | **Gearing & Physics Refinement** | • Shift-drop powerband matching<br>• 1st gear launch traction optimization<br>• Theoretical aerodynamic top-speed validation | Medium |
+
 
