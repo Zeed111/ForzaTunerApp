@@ -3,6 +3,16 @@ export type CarCategory = 'jdm' | 'track' | 'classic' | 'supercar';
 export type Discipline = 'drift' | 'grip' | 'dirt' | 'offroad' | 'drag';
 export type Drivetrain = 'RWD' | 'AWD' | 'FWD';
 export type EngineType = 'balanced' | 'highrev' | 'torque' | 'ev';
+export type TireCompound =
+  | 'stock'
+  | 'street'
+  | 'sport'
+  | 'semislick'
+  | 'slick'
+  | 'rally'
+  | 'offroad'
+  | 'drift'
+  | 'drag';
 
 export interface VehicleInputs {
   units: UnitSystem;
@@ -12,6 +22,8 @@ export interface VehicleInputs {
   hp: number;
   weight: number; // kg or lbs based on units
   frontWeightPct: number;
+  tireCompound?: TireCompound;
+  handlingBias?: number; // -5 (Stable/Understeer) to +5 (Agile/Oversteer), default 0
   // Tires
   tWidthF: number;
   tProfileF: number;
@@ -42,6 +54,11 @@ export interface VehicleInputs {
 export interface TuneResult {
   tireFront: string;
   tireRear: string;
+  tireFrontCold: string;
+  tireFrontHot: string;
+  tireRearCold: string;
+  tireRearHot: string;
+  handlingBiasNote?: string;
   camberFront: string;
   camberRear: string;
   toeFront: string;
@@ -124,32 +141,99 @@ export function calculateTune(car: VehicleInputs): TuneResult {
   const widthScaleF = 245 / widthF;
   const widthScaleR = 245 / widthR;
 
-  // 2. Tire Pressures (in bar) - Distinctly scaled by axle load and tire width
-  let baseBarF = 2.0;
-  let baseBarR = 2.0;
+  // 2. Tire Compound & Thermal Pressure Modeling
+  const compound: TireCompound = car.tireCompound || 'sport';
+  const bias = clamp(car.handlingBias != null ? car.handlingBias : 0, -5, 5);
 
-  if (car.discipline === 'drift') {
-    // Drift: Higher front pressure for crisp steering entry, lower rear pressure for wide contact patch under throttle
-    baseBarF = clamp(2.25 + (frontMassKg - 700) * 0.00038 * widthScaleF, 2.05, 2.70);
-    baseBarR = clamp(1.65 + (rearMassKg - 700) * 0.00032 * widthScaleR, 1.40, 2.15);
-  } else if (car.discipline === 'grip') {
-    // Grip: Balanced pressure based on axle load distribution and tire width
-    baseBarF = clamp(1.95 + (frontMassKg - 700) * 0.00040 * widthScaleF, 1.75, 2.45);
-    baseBarR = clamp(1.95 + (rearMassKg - 700) * 0.00040 * widthScaleR, 1.75, 2.45);
-  } else if (car.discipline === 'dirt') {
-    baseBarF = clamp(1.65 + (frontMassKg - 700) * 0.00030 * widthScaleF, 1.40, 2.10);
-    baseBarR = clamp(1.65 + (rearMassKg - 700) * 0.00030 * widthScaleR, 1.40, 2.10);
-  } else if (car.discipline === 'offroad') {
-    baseBarF = clamp(1.45 + (frontMassKg - 700) * 0.00025 * widthScaleF, 1.25, 1.85);
-    baseBarR = clamp(1.45 + (rearMassKg - 700) * 0.00025 * widthScaleR, 1.25, 1.85);
-  } else if (car.discipline === 'drag') {
-    baseBarF = clamp(3.20 + (frontMassKg - 700) * 0.0003, 2.80, 3.80);
-    baseBarR = clamp(1.10 + (rearMassKg - 700) * 0.0002, 1.05, 1.45);
+  let compoundGrip = 1.00;
+  let thermalRiseBarF = 0.19; // ~2.8 PSI
+  let thermalRiseBarR = 0.19; // ~2.8 PSI
+  let compoundBaseMod = 0.0;
+
+  switch (compound) {
+    case 'stock':
+      compoundGrip = 0.90;
+      thermalRiseBarF = 0.15;
+      thermalRiseBarR = 0.15;
+      compoundBaseMod = 0.05;
+      break;
+    case 'street':
+      compoundGrip = 0.95;
+      thermalRiseBarF = 0.17;
+      thermalRiseBarR = 0.17;
+      compoundBaseMod = 0.02;
+      break;
+    case 'sport':
+      compoundGrip = 1.00;
+      thermalRiseBarF = 0.19;
+      thermalRiseBarR = 0.19;
+      compoundBaseMod = 0.0;
+      break;
+    case 'semislick':
+      compoundGrip = 1.10;
+      thermalRiseBarF = 0.22;
+      thermalRiseBarR = 0.22;
+      compoundBaseMod = -0.04;
+      break;
+    case 'slick':
+      compoundGrip = 1.22;
+      thermalRiseBarF = 0.25;
+      thermalRiseBarR = 0.25;
+      compoundBaseMod = -0.07;
+      break;
+    case 'rally':
+      compoundGrip = 0.92;
+      thermalRiseBarF = 0.14;
+      thermalRiseBarR = 0.14;
+      compoundBaseMod = -0.15;
+      break;
+    case 'offroad':
+      compoundGrip = 0.85;
+      thermalRiseBarF = 0.12;
+      thermalRiseBarR = 0.12;
+      compoundBaseMod = -0.25;
+      break;
+    case 'drift':
+      compoundGrip = 0.94;
+      thermalRiseBarF = 0.14; // Front stable
+      thermalRiseBarR = 0.26; // High rear slip friction
+      compoundBaseMod = 0.0;
+      break;
+    case 'drag':
+      compoundGrip = 1.18;
+      thermalRiseBarF = 0.10;
+      thermalRiseBarR = 0.18;
+      compoundBaseMod = 0.0;
+      break;
   }
 
-  // Clamp to Forza Horizon in-game minimum (1.05 bar / 15.2 PSI) and maximum (3.8 bar / 55.0 PSI)
-  baseBarF = clamp(baseBarF, 1.05, 3.80);
-  baseBarR = clamp(baseBarR, 1.05, 3.80);
+  // Target Hot Operating Pressures (in bar) - based on axle load, discipline, width, and compound
+  let targetHotBarF = 2.15;
+  let targetHotBarR = 2.15;
+
+  if (car.discipline === 'drift') {
+    targetHotBarF = clamp(2.35 + (frontMassKg - 700) * 0.00038 * widthScaleF + compoundBaseMod, 2.10, 2.80);
+    targetHotBarR = clamp(1.85 + (rearMassKg - 700) * 0.00032 * widthScaleR + compoundBaseMod, 1.50, 2.30);
+  } else if (car.discipline === 'grip') {
+    targetHotBarF = clamp(2.10 + (frontMassKg - 700) * 0.00040 * widthScaleF + compoundBaseMod, 1.85, 2.55);
+    targetHotBarR = clamp(2.10 + (rearMassKg - 700) * 0.00040 * widthScaleR + compoundBaseMod, 1.85, 2.55);
+  } else if (car.discipline === 'dirt') {
+    targetHotBarF = clamp(1.75 + (frontMassKg - 700) * 0.00030 * widthScaleF + compoundBaseMod, 1.45, 2.20);
+    targetHotBarR = clamp(1.75 + (rearMassKg - 700) * 0.00030 * widthScaleR + compoundBaseMod, 1.45, 2.20);
+  } else if (car.discipline === 'offroad') {
+    targetHotBarF = clamp(1.55 + (frontMassKg - 700) * 0.00025 * widthScaleF + compoundBaseMod, 1.30, 1.95);
+    targetHotBarR = clamp(1.55 + (rearMassKg - 700) * 0.00025 * widthScaleR + compoundBaseMod, 1.30, 1.95);
+  } else if (car.discipline === 'drag') {
+    targetHotBarF = clamp(3.30 + (frontMassKg - 700) * 0.0003, 2.80, 3.80);
+    targetHotBarR = clamp(1.25 + (rearMassKg - 700) * 0.0002, 1.10, 1.55);
+  }
+
+  targetHotBarF = clamp(targetHotBarF, 1.15, 3.80);
+  targetHotBarR = clamp(targetHotBarR, 1.15, 3.80);
+
+  // Cold Starting Pressures (what the player inputs in the Forza tuning menu)
+  const coldBarF = clamp(targetHotBarF - thermalRiseBarF, 1.05, 3.65);
+  const coldBarR = clamp(targetHotBarR - thermalRiseBarR, 1.05, 3.65);
 
   // 3. Alignment (Camber, Toe, Caster)
   // Profile mod: taller sidewalls deform more under lateral G, requiring more negative static camber
@@ -196,7 +280,42 @@ export function calculateTune(car: VehicleInputs): TuneResult {
     caster = clamp(baseCaster + (fw - 0.5) * 0.8, 5.2, 7.0);
   }
 
-  // 4. Springs, ARBs & Damping
+  // Handling bias effect on Alignment & Turn-in:
+  if (bias > 0) {
+    // Agile / Oversteer: slight extra front toe-out for immediate bite, slight extra negative camber
+    toeF = clamp(toeF - bias * 0.02, -1.2, 0.2);
+    cF = clamp(cF - bias * 0.05, -5.5, -0.8);
+  } else if (bias < 0) {
+    // Stable / Understeer: slight extra rear camber for planted traction
+    cR = clamp(cR + bias * 0.04, -3.0, -0.2);
+  }
+
+  // 4. Aero Downforce (Calculated before springs to allow dynamic aero compensation)
+  const aeroFMin = car.aeroFrontMin || 0;
+  const aeroFMax = Math.max(aeroFMin, car.aeroFrontMax || 150);
+  const aeroRMin = car.aeroRearMin || 0;
+  const aeroRMax = Math.max(aeroRMin, car.aeroRearMax || 250);
+
+  let aeroF = aeroFMin;
+  let aeroR = aeroRMin;
+
+  if (car.discipline === 'offroad' || car.discipline === 'dirt') {
+    aeroF = aeroFMin + (aeroFMax - aeroFMin) * 0.35;
+    aeroR = aeroRMin + (aeroRMax - aeroRMin) * 0.40;
+  } else if (car.discipline === 'drift') {
+    aeroF = aeroFMin + (aeroFMax - aeroFMin) * clamp(0.20 + hpFactor * 0.25, 0.15, 0.60);
+    aeroR = aeroRMin + (aeroRMax - aeroRMin) * clamp(0.25 + hpFactor * 0.30, 0.20, 0.70);
+  } else if (car.discipline === 'drag') {
+    aeroF = aeroFMin;
+    aeroR = aeroRMin;
+  } else {
+    // Grip
+    const baseGrip = car.category === 'track' ? 0.85 : 0.60;
+    aeroF = aeroFMin + (aeroFMax - aeroFMin) * clamp(baseGrip * (fw / 0.5), 0.15, 0.95);
+    aeroR = aeroRMin + (aeroRMax - aeroRMin) * clamp(baseGrip * (rw / 0.5) * 1.08, 0.15, 0.95);
+  }
+
+  // 5. Springs with Dynamic Aero Downforce Compensation
   const spFMin = car.springFrontMin || 100;
   const spFMax = Math.max(spFMin + 1, car.springFrontMax || 600);
   const spRMin = car.springRearMin || 100;
@@ -208,25 +327,38 @@ export function calculateTune(car: VehicleInputs): TuneResult {
   let springRatioF = fw;
   let springRatioR = rw;
 
+  // Aero dynamic load ratio:
+  const aeroRangeF = aeroFMax - aeroFMin;
+  const aeroRangeR = aeroRMax - aeroRMin;
+  const aeroLoadF = aeroRangeF > 0 ? (aeroF - aeroFMin) / aeroRangeF : 0;
+  const aeroLoadR = aeroRangeR > 0 ? (aeroR - aeroRMin) / aeroRangeR : 0;
+
+  // Dynamic Aero Boost: Stiffens spring rate so high-speed downforce doesn't bottom out
+  const aeroSpringBoostF = aeroLoadF * 0.12 * compoundGrip;
+  const aeroSpringBoostR = aeroLoadR * 0.12 * compoundGrip;
+
   if (car.discipline === 'drift') {
     // Drift: Slightly softer rear spring allows rear to squat under throttle for forward bite
-    springRatioF = clamp(fw + 0.04, 0.25, 0.85);
-    springRatioR = clamp(rw - 0.06, 0.15, 0.80);
+    springRatioF = clamp(fw + 0.04 + aeroSpringBoostF, 0.25, 0.88);
+    springRatioR = clamp(rw - 0.06 + aeroSpringBoostR, 0.15, 0.82);
   } else if (car.discipline === 'drag') {
     springRatioF = 0.85;
     springRatioR = 0.15;
   } else if (car.discipline === 'offroad') {
-    springRatioF = clamp(fw * 0.75, 0.25, 0.60);
-    springRatioR = clamp(rw * 0.75, 0.25, 0.60);
+    springRatioF = clamp(fw * 0.75 + aeroSpringBoostF, 0.25, 0.65);
+    springRatioR = clamp(rw * 0.75 + aeroSpringBoostR, 0.25, 0.65);
   } else if (car.discipline === 'dirt') {
-    springRatioF = clamp(fw * 0.85, 0.30, 0.70);
-    springRatioR = clamp(rw * 0.85, 0.30, 0.70);
+    springRatioF = clamp(fw * 0.85 + aeroSpringBoostF, 0.30, 0.72);
+    springRatioR = clamp(rw * 0.85 + aeroSpringBoostR, 0.30, 0.72);
+  } else {
+    springRatioF = clamp(fw + aeroSpringBoostF, 0.25, 0.90);
+    springRatioR = clamp(rw + aeroSpringBoostR, 0.25, 0.90);
   }
 
   const spF = spFMin + rangeSpF * springRatioF;
   const spR = spRMin + rangeSpR * springRatioR;
 
-  // Anti-Roll Bars (ARBs): Scale with total vehicle weight and tire stagger
+  // Anti-Roll Bars (ARBs): Scale with total vehicle weight, tire stagger, and handling balance bias
   const weightArbScale = clamp(weightKg / 1380, 0.70, 1.45);
   let baseArbF = ((65 - 1) * fw + 1) * weightArbScale;
   let baseArbR = ((65 - 1) * rw + 1) * weightArbScale;
@@ -255,7 +387,16 @@ export function calculateTune(car: VehicleInputs): TuneResult {
     arbR = clamp(baseArbR, 12, 60);
   }
 
-  // Damping: Damped according to corner mass and spring stiffness (resolves mathematical cancellation bug)
+  // Handling Balance Bias roll stiffness redistribution:
+  // bias > 0 (Oversteer): stiffens rear ARB, softens front ARB
+  // bias < 0 (Understeer): stiffens front ARB, softens rear ARB
+  const deltaArbF = -bias * 1.6;
+  const deltaArbR = bias * 1.8;
+
+  arbF = clamp(arbF + deltaArbF, 1, 65);
+  arbR = clamp(arbR + deltaArbR, 1, 65);
+
+  // 6. Damping: Damped according to corner mass and spring stiffness
   const frontCornerKg = frontMassKg / 2;
   const rearCornerKg = rearMassKg / 2;
   const massDampModF = clamp((frontCornerKg - 350) / 350 * 2.2, -2.5, 3.2);
@@ -274,7 +415,6 @@ export function calculateTune(car: VehicleInputs): TuneResult {
     bmpF_val = 16.0;
     bmpR_val = 3.5;
   } else if (car.discipline === 'drift') {
-    // Drift: Firm front rebound controls transition snap; softer rear rebound keeps rear planted under power
     rebF_val = clamp(10.8 + massDampModF + (springRatioF - 0.5) * 3.0, 6.0, 18.0);
     rebR_val = clamp(8.4 + massDampModR + (springRatioR - 0.5) * 2.5, 4.5, 15.0);
     bmpF_val = clamp(rebF_val * bumpFactor, 3.0, 12.0);
@@ -298,7 +438,14 @@ export function calculateTune(car: VehicleInputs): TuneResult {
     bmpR_val = clamp(rebR_val * bumpFactor, 2.5, 11.5);
   }
 
-  // Ride Height
+  // Handling bias effect on damping
+  if (bias < 0) {
+    rebF_val = clamp(rebF_val + Math.abs(bias) * 0.25, 3.0, 19.0);
+  } else if (bias > 0) {
+    rebR_val = clamp(rebR_val + bias * 0.20, 3.0, 19.0);
+  }
+
+  // 7. Ride Height
   const hFMin = car.heightFrontMin || 9.0;
   const hFMax = Math.max(hFMin + 0.1, car.heightFrontMax || 18.0);
   const hRMin = car.heightRearMin || 9.0;
@@ -324,23 +471,6 @@ export function calculateTune(car: VehicleInputs): TuneResult {
 
   const hF = hFMin + (hFMax - hFMin) * hRatioF;
   const hR = hRMin + (hRMax - hRMin) * hRatioR;
-
-  // 5. Aero Downforce
-  const aeroFMin = car.aeroFrontMin || 0;
-  const aeroFMax = Math.max(aeroFMin, car.aeroFrontMax || 150);
-  const aeroRMin = car.aeroRearMin || 0;
-  const aeroRMax = Math.max(aeroRMin, car.aeroRearMax || 250);
-
-  let aeroF = aeroFMin;
-  let aeroR = aeroRMin;
-
-  if (car.discipline === 'offroad' || car.discipline === 'dirt') {
-    aeroF = aeroFMin + (aeroFMax - aeroFMin) * 0.35;
-    aeroR = aeroRMin + (aeroRMax - aeroRMin) * 0.40;
-  } else if (car.discipline === 'drift') {
-    // Drift: Lower rear wing reduces high-speed resistance while sliding, moderate front stabilizes angle
-    aeroF = aeroFMin + (aeroFMax - aeroFMin) * clamp(0.20 + hpFactor * 0.25, 0.15, 0.60);
-    aeroR = aeroRMin + (aeroRMax - aeroRMin) * clamp(0.25 + hpFactor * 0.30, 0.20, 0.70);
   } else if (car.discipline === 'drag') {
     aeroF = aeroFMin;
     aeroR = aeroRMin;
@@ -468,8 +598,13 @@ export function calculateTune(car: VehicleInputs): TuneResult {
   }
 
   return {
-    tireFront: isImp ? `${(baseBarF * 14.5038).toFixed(1)} PSI` : `${baseBarF.toFixed(2)} bar`,
-    tireRear: isImp ? `${(baseBarR * 14.5038).toFixed(1)} PSI` : `${baseBarR.toFixed(2)} bar`,
+    tireFront: isImp ? `${(coldBarF * 14.5038).toFixed(1)} PSI` : `${coldBarF.toFixed(2)} bar`,
+    tireRear: isImp ? `${(coldBarR * 14.5038).toFixed(1)} PSI` : `${coldBarR.toFixed(2)} bar`,
+    tireFrontCold: isImp ? `${(coldBarF * 14.5038).toFixed(1)} PSI` : `${coldBarF.toFixed(2)} bar`,
+    tireFrontHot: isImp ? `${(targetHotBarF * 14.5038).toFixed(1)} PSI` : `${targetHotBarF.toFixed(2)} bar`,
+    tireRearCold: isImp ? `${(coldBarR * 14.5038).toFixed(1)} PSI` : `${coldBarR.toFixed(2)} bar`,
+    tireRearHot: isImp ? `${(targetHotBarR * 14.5038).toFixed(1)} PSI` : `${targetHotBarR.toFixed(2)} bar`,
+    handlingBiasNote: bias === 0 ? '0 (Neutral Balance)' : bias > 0 ? `+${bias} (Agile Rotation)` : `${bias} (Stable Understeer)`,
     camberFront: `${cF.toFixed(1)}°`,
     camberRear: `${cR.toFixed(1)}°`,
     toeFront: formatToe(toeF),

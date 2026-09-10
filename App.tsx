@@ -24,6 +24,7 @@ import {
   Discipline,
   Drivetrain,
   EngineType,
+  TireCompound,
 } from './src/tuningEngine';
 import { GearingChart } from './src/components/GearingChart';
 import { CarSelectorModal } from './src/components/CarSelectorModal';
@@ -39,6 +40,8 @@ const DEFAULT_INPUTS: VehicleInputs = {
   hp: 650,
   weight: 1280,
   frontWeightPct: 53.0,
+  tireCompound: 'sport',
+  handlingBias: 0,
   tWidthF: 245,
   tProfileF: 40,
   tRimF: 18,
@@ -356,6 +359,33 @@ export default function App() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t('frontRearTireSizes')}</Text>
 
+          <Text style={styles.label}>{t('tireCompound')}</Text>
+          <View style={styles.pillGroupFull}>
+            {(
+              [
+                { key: 'stock', label: t('compoundStock') },
+                { key: 'street', label: t('compoundStreet') },
+                { key: 'sport', label: t('compoundSport') },
+                { key: 'semislick', label: t('compoundSemislick') },
+                { key: 'slick', label: t('compoundSlick') },
+                { key: 'rally', label: t('compoundRally') },
+                { key: 'offroad', label: t('compoundOffroad') },
+                { key: 'drift', label: t('compoundDrift') },
+                { key: 'drag', label: t('compoundDrag') },
+              ] as { key: TireCompound; label: string }[]
+            ).map(c => (
+              <TouchableOpacity
+                key={c.key}
+                style={[styles.subPill, (inputs.tireCompound || 'sport') === c.key && styles.subPillActive]}
+                onPress={() => setInputs(p => ({ ...p, tireCompound: c.key }))}
+              >
+                <Text style={[styles.subPillText, (inputs.tireCompound || 'sport') === c.key && styles.subPillTextActive]}>
+                  {c.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <Text style={styles.label}>{t('frontTireLabel')}</Text>
           <View style={styles.row}>
             <NumericInput
@@ -510,6 +540,62 @@ export default function App() {
               </View>
             </View>
           </View>
+
+          {/* Handling Balance Bias Control */}
+          <View style={styles.biasCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <Text style={styles.biasTitle}>{t('handlingBiasTitle')}</Text>
+              <Text style={styles.biasValueText}>
+                {(inputs.handlingBias || 0) === 0
+                  ? t('handlingNeutral')
+                  : (inputs.handlingBias || 0) > 0
+                  ? `+${inputs.handlingBias} ${t('handlingAgile')}`
+                  : `${inputs.handlingBias} ${t('handlingStable')}`}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 10, color: '#64748b', marginBottom: 8 }}>
+              {t('handlingBiasNote')}
+            </Text>
+
+            <View style={styles.biasControlsRow}>
+              <TouchableOpacity
+                style={styles.biasStepBtn}
+                onPress={() => setInputs(p => ({ ...p, handlingBias: Math.max(-5, (p.handlingBias || 0) - 1) }))}
+              >
+                <Text style={styles.biasStepBtnText}>−</Text>
+              </TouchableOpacity>
+
+              <View style={styles.biasQuickGroup}>
+                <TouchableOpacity
+                  style={[styles.biasPill, (inputs.handlingBias || 0) === -3 && styles.biasPillActiveStable]}
+                  onPress={() => setInputs(p => ({ ...p, handlingBias: -3 }))}
+                >
+                  <Text style={[styles.biasPillText, (inputs.handlingBias || 0) === -3 && styles.biasPillTextActive]}>-3 Stable</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.biasPill, (inputs.handlingBias || 0) === 0 && styles.biasPillActiveNeutral]}
+                  onPress={() => setInputs(p => ({ ...p, handlingBias: 0 }))}
+                >
+                  <Text style={[styles.biasPillText, (inputs.handlingBias || 0) === 0 && styles.biasPillTextActive]}>0 Neutral</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.biasPill, (inputs.handlingBias || 0) === 3 && styles.biasPillActiveAgile]}
+                  onPress={() => setInputs(p => ({ ...p, handlingBias: 3 }))}
+                >
+                  <Text style={[styles.biasPillText, (inputs.handlingBias || 0) === 3 && styles.biasPillTextActive]}>+3 Agile</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={styles.biasStepBtn}
+                onPress={() => setInputs(p => ({ ...p, handlingBias: Math.min(5, (p.handlingBias || 0) + 1) }))}
+              >
+                <Text style={styles.biasStepBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         {/* 4. AERO DOWNFORCE BOUNDS */}
@@ -622,7 +708,15 @@ export default function App() {
 
           <View style={styles.outputRow}>
             <Text style={styles.outLabel}>{t('tirePressureFR')}</Text>
-            <Text style={styles.outVal}>{`${tune.tireFront} / ${tune.tireRear}`}</Text>
+            <Text style={styles.outVal}>{`${tune.tireFrontCold} / ${tune.tireRearCold}`}</Text>
+          </View>
+          <View style={[styles.outputRow, { borderBottomColor: '#101726' }]}>
+            <Text style={[styles.outLabel, { fontSize: 11, color: '#00f0ff', fontStyle: 'italic' }]}>
+              {'↳ Target Hot (Telemetry):'}
+            </Text>
+            <Text style={[styles.outVal, { fontSize: 11, color: '#00f0ff' }]}>
+              {`${tune.tireFrontHot} / ${tune.tireRearHot}`}
+            </Text>
           </View>
           <View style={styles.outputRow}>
             <Text style={styles.outLabel}>{t('camberFR')}</Text>
@@ -640,6 +734,16 @@ export default function App() {
             <Text style={styles.outLabel}>{t('arbFR')}</Text>
             <Text style={styles.outVal}>{`${tune.arbFront} / ${tune.arbRear}`}</Text>
           </View>
+          {(inputs.handlingBias || 0) !== 0 && (
+            <View style={[styles.outputRow, { borderBottomColor: '#101726' }]}>
+              <Text style={[styles.outLabel, { fontSize: 11, color: (inputs.handlingBias || 0) > 0 ? '#ff4d6d' : '#00f0ff', fontStyle: 'italic' }]}>
+                {'↳ Handling Balance:'}
+              </Text>
+              <Text style={[styles.outVal, { fontSize: 11, color: (inputs.handlingBias || 0) > 0 ? '#ff4d6d' : '#00f0ff' }]}>
+                {tune.handlingBiasNote}
+              </Text>
+            </View>
+          )}
           <View style={styles.outputRow}>
             <Text style={styles.outLabel}>{t('springsFR')}</Text>
             <Text style={styles.outVal}>{`${tune.springFront} / ${tune.springRear}`}</Text>
@@ -844,4 +948,42 @@ const styles = StyleSheet.create({
   deleteBtnText: { color: '#ff4d6d', fontSize: 11, fontWeight: '700' },
   closeBtn: { marginTop: 14, backgroundColor: '#070a10', borderWidth: 1, borderColor: '#1e2638', paddingVertical: 8, borderRadius: 6, alignItems: 'center' },
   closeBtnText: { color: '#94a3b8', fontSize: 12, fontWeight: '600' },
+  biasCard: {
+    backgroundColor: '#070a10',
+    borderWidth: 1,
+    borderColor: '#1e2638',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  biasTitle: { fontSize: 11, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  biasValueText: { fontSize: 11, color: '#00ff9d', fontWeight: '800' },
+  biasControlsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  biasStepBtn: {
+    backgroundColor: '#0f1420',
+    borderWidth: 1,
+    borderColor: '#1e2638',
+    borderRadius: 6,
+    width: 34,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  biasStepBtnText: { color: '#00f0ff', fontSize: 18, fontWeight: 'bold' },
+  biasQuickGroup: { flexDirection: 'row', flex: 1, gap: 4 },
+  biasPill: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    backgroundColor: '#0f1420',
+    borderWidth: 1,
+    borderColor: '#1e2638',
+    borderRadius: 6,
+  },
+  biasPillActiveStable: { backgroundColor: '#004354', borderColor: '#00f0ff' },
+  biasPillActiveNeutral: { backgroundColor: '#1e293b', borderColor: '#94a3b8' },
+  biasPillActiveAgile: { backgroundColor: '#590e1c', borderColor: '#ff1744' },
+  biasPillText: { color: '#8a99ad', fontSize: 10, fontWeight: '700' },
+  biasPillTextActive: { color: '#ffffff' },
 });

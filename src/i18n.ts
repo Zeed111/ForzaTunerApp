@@ -49,8 +49,18 @@ export const translations = {
     weight: 'Weight ({{unit}})',
     frontWeightPct: 'Front Wt %',
 
-    // Section 2: Tires
+    // Section 2: Tires & Compound
     frontRearTireSizes: '2. Front & Rear Tire Sizes',
+    tireCompound: 'Tire Compound',
+    compoundStock: 'Stock',
+    compoundStreet: 'Street',
+    compoundSport: 'Sport',
+    compoundSemislick: 'Semi-Slick',
+    compoundSlick: 'Race Slick',
+    compoundRally: 'Rally',
+    compoundOffroad: 'Off-Road',
+    compoundDrift: 'Drift',
+    compoundDrag: 'Drag',
     frontTireLabel: 'Front Tire (Width mm / Aspect % / Rim in)',
     rearTireLabel: 'Rear Tire (Width mm / Aspect % / Rim in)',
     placeholderWidth: 'Width',
@@ -59,8 +69,14 @@ export const translations = {
     frontDiaCirc: 'Front Dia: {{dia}} | Circ: {{circ}}',
     rearDiaCirc: 'Rear Dia: {{dia}} | Circ: {{circ}}',
 
-    // Section 3: Suspension Limits
+    // Section 3: Suspension Limits & Handling Bias
     sliderLimits: '3. In-Game Slider Limits',
+    handlingBiasTitle: 'Handling Balance Bias',
+    handlingStable: 'Stable (Understeer)',
+    handlingNeutral: 'Neutral Balance',
+    handlingAgile: 'Agile (Oversteer)',
+    handlingBiasDisplay: 'Bias: {{val}}',
+    handlingBiasNote: 'Fine-tunes ARB roll distribution & turn-in rotation',
     placeholderMin: 'Min',
     placeholderMax: 'Max',
     frontSprings: 'Front Springs ({{unit}})',
