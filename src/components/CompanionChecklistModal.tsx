@@ -8,7 +8,6 @@ import {
   StyleSheet,
 } from 'react-native';
 import { TuneResult, VehicleInputs } from '../tuningEngine';
-import { t } from '../i18n';
 
 export interface CompanionChecklistModalProps {
   visible: boolean;
@@ -31,7 +30,7 @@ export const CompanionChecklistModal: React.FC<CompanionChecklistModalProps> = (
   tune,
   inputs,
 }) => {
-  const [checkedIds, setCheckedIds] = useState<Record<string, boolean>>({});
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Build the items in the exact Forza garage sequence
@@ -228,11 +227,19 @@ export const CompanionChecklistModal: React.FC<CompanionChecklistModalProps> = (
   ];
 
   const totalCount = items.length;
-  const checkedCount = Object.values(checkedIds).filter(Boolean).length;
-  const pct = Math.round((checkedCount / totalCount) * 100);
+  const checkedCount = checkedIds.size;
+  const pct = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
 
   const toggleCheck = (id: string) => {
-    setCheckedIds(prev => ({ ...prev, [id]: !prev[id] }));
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const handleCopy = (id: string, text: string) => {
@@ -244,13 +251,11 @@ export const CompanionChecklistModal: React.FC<CompanionChecklistModalProps> = (
   };
 
   const handleCheckAll = () => {
-    const all: Record<string, boolean> = {};
-    items.forEach(i => (all[i.id] = true));
-    setCheckedIds(all);
+    setCheckedIds(new Set(items.map(i => i.id)));
   };
 
   const handleReset = () => {
-    setCheckedIds({});
+    setCheckedIds(new Set());
   };
 
   // Group by category
@@ -296,7 +301,7 @@ export const CompanionChecklistModal: React.FC<CompanionChecklistModalProps> = (
                 <View key={cat} style={styles.categorySection}>
                   <Text style={styles.categoryHeader}>{cat}</Text>
                   {catItems.map(item => {
-                    const isChecked = !!checkedIds[item.id];
+                    const isChecked = checkedIds.has(item.id);
                     const isCopied = copiedId === item.id;
                     return (
                       <TouchableOpacity
