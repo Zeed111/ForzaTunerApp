@@ -211,6 +211,7 @@ export default function App() {
       <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#070a10" translucent={false} />
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -782,7 +783,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#070a10',
   },
-  container: { padding: 14, paddingBottom: 60 },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  container: {
+    padding: 14,
+    paddingBottom: 60,
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+  },
   header: { alignItems: 'center', marginBottom: 14, marginTop: 4 },
   title: { fontSize: 22, fontWeight: '900', color: '#f8fafc', letterSpacing: 1.5 },
   titleAccent: { color: '#ff1744' }, // FH6 Torii Crimson
@@ -808,11 +819,11 @@ const styles = StyleSheet.create({
   subPillActive: { backgroundColor: '#ff1744', borderColor: '#ff1744' },
   subPillText: { color: '#8a99ad', fontSize: 11, fontWeight: '700' },
   subPillTextActive: { color: '#ffffff' },
-  row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  rowTight: { flexDirection: 'row', gap: 4, flex: 1 },
-  col: { flex: 1 },
-  input: { backgroundColor: '#070a10', borderWidth: 1, borderColor: '#1e2638', borderRadius: 6, color: '#f8fafc', paddingHorizontal: 8, paddingVertical: 6, fontSize: 13 },
-  inputHalf: { flex: 1 },
+  row: { flexDirection: 'row', gap: 8, marginBottom: 8, width: '100%' },
+  rowTight: { flexDirection: 'row', gap: 4, flex: 1, minWidth: 0 },
+  col: { flex: 1, minWidth: 0 },
+  input: { backgroundColor: '#070a10', borderWidth: 1, borderColor: '#1e2638', borderRadius: 6, color: '#f8fafc', paddingHorizontal: 8, paddingVertical: 6, fontSize: 13, minWidth: 0 },
+  inputHalf: { flex: 1, minWidth: 0 },
   sectionDivider: { fontSize: 11, fontWeight: '800', color: '#f8fafc', marginTop: 8, marginBottom: 8, borderTopWidth: 1, borderTopColor: '#1c2438', paddingTop: 8, letterSpacing: 0.5 },
   outputRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#151c2d' },
   outLabel: { color: '#94a3b8', fontSize: 12, fontWeight: '500' },

@@ -98,5 +98,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     fontSize: 13,
+    minWidth: 0,
   },
 });

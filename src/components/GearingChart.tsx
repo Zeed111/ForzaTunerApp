@@ -22,7 +22,8 @@ export const GearingChart: React.FC<GearingChartProps> = ({
   units,
 }) => {
   const { width: windowWidth } = useWindowDimensions();
-  const width = Math.max(windowWidth - 48, 280);
+  const [containerWidth, setContainerWidth] = React.useState<number>(0);
+  const width = containerWidth > 0 ? containerWidth : Math.min(Math.max(windowWidth - 48, 280), 540);
   const height = 200;
 
   const padLeft = 45;
@@ -41,7 +42,15 @@ export const GearingChart: React.FC<GearingChartProps> = ({
   const maxDisplaySpeed = safeTargetSpeed * 1.15;
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      onLayout={e => {
+        const w = Math.floor(e.nativeEvent.layout.width);
+        if (w > 0 && Math.abs(w - containerWidth) > 2) {
+          setContainerWidth(w);
+        }
+      }}
+    >
       <Svg width={width} height={height}>
         {/* Background */}
         <Rect width={width} height={height} fill="#070a10" rx={8} />
@@ -110,6 +119,7 @@ export const GearingChart: React.FC<GearingChartProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     marginVertical: 10,
     alignItems: 'center',
     borderRadius: 8,

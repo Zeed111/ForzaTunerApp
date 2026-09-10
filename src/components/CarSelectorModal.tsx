@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   modalContent: { width: '100%', maxWidth: 500, backgroundColor: '#0f1420', borderWidth: 1, borderColor: '#1c2438', borderRadius: 12, padding: 16 },
   modalTitle: { fontSize: 16, fontWeight: '900', color: '#ff1744', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 1 },
   searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, position: 'relative' },
-  searchInput: { flex: 1, backgroundColor: '#070a10', borderWidth: 1, borderColor: '#1e2638', borderRadius: 6, color: '#f8fafc', paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, paddingRight: 36 },
+  searchInput: { flex: 1, minWidth: 0, backgroundColor: '#070a10', borderWidth: 1, borderColor: '#1e2638', borderRadius: 6, color: '#f8fafc', paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, paddingRight: 36 },
   clearSearchBtn: { position: 'absolute', right: 10, padding: 4 },
   clearSearchText: { color: '#94a3b8', fontSize: 14, fontWeight: 'bold' },
   carItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#1c2438' },
