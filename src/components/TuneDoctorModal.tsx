@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  Platform,
 } from 'react-native';
 import { VehicleInputs } from '../tuningEngine';
 import { t } from '../i18n';
@@ -169,8 +170,126 @@ export const TuneDoctorModal: React.FC<TuneDoctorModalProps> = ({
   onApplyFix,
 }) => {
   const [selectedId, setSelectedId] = useState<string>(SYMPTOMS[0].id);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const currentSymptom = SYMPTOMS.find(s => s.id === selectedId) || SYMPTOMS[0];
+  const scrollRef = useRef<ScrollView>(null);
+  const isDraggingRef = useRef(false);
+  const hasMovedRef = useRef(false);
+
+  const selectedIndex = SYMPTOMS.findIndex(s => s.id === selectedId);
+  const currentSymptom = SYMPTOMS[selectedIndex >= 0 ? selectedIndex : 0];
+
+  // Mouse Drag-To-Scroll & Mouse Wheel horizontal scroll for Web
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !visible) return;
+
+    const getScrollNode = (): HTMLElement | null => {
+      const scrollEl = scrollRef.current as any;
+      if (!scrollEl) return null;
+      if (typeof scrollEl.getScrollableNode === 'function') {
+        return scrollEl.getScrollableNode();
+      }
+      return scrollEl;
+    };
+
+    const node = getScrollNode();
+    if (!node) return;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollStart = 0;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      isDown = true;
+      isDraggingRef.current = true;
+      hasMovedRef.current = false;
+      startX = e.pageX - node.offsetLeft;
+      scrollStart = node.scrollLeft;
+      node.style.cursor = 'grabbing';
+      node.style.userSelect = 'none';
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      const currentX = e.pageX - node.offsetLeft;
+      const walk = (currentX - startX) * 1.25;
+      if (Math.abs(walk) > 4) {
+        hasMovedRef.current = true;
+      }
+      node.scrollLeft = scrollStart - walk;
+    };
+
+    const handleMouseUp = () => {
+      if (!isDown) return;
+      isDown = false;
+      isDraggingRef.current = false;
+      node.style.cursor = 'grab';
+      node.style.removeProperty('user-select');
+      setTimeout(() => {
+        hasMovedRef.current = false;
+      }, 60);
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > 0 && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) {
+        e.preventDefault();
+        node.scrollLeft += e.deltaY;
+      }
+    };
+
+    node.style.cursor = 'grab';
+    node.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    node.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      node.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      node.removeEventListener('wheel', handleWheel);
+    };
+  }, [visible]);
+
+  const handleScroll = (event: any) => {
+    const x = event.nativeEvent.contentOffset.x;
+    const contentWidth = event.nativeEvent.contentSize.width;
+    const layoutWidth = event.nativeEvent.layoutMeasurement.width;
+    setCanScrollLeft(x > 6);
+    setCanScrollRight(x < contentWidth - layoutWidth - 6);
+  };
+
+  const scrollBy = (offset: number) => {
+    if (Platform.OS === 'web') {
+      const scrollEl = scrollRef.current as any;
+      const node = scrollEl?.getScrollableNode?.() || scrollEl;
+      if (node && typeof node.scrollBy === 'function') {
+        node.scrollBy({ left: offset, behavior: 'smooth' });
+        return;
+      }
+    }
+    scrollRef.current?.scrollTo({ x: offset > 0 ? 500 : 0, animated: true });
+  };
+
+  const handleSelectSymptom = (id: string, index: number) => {
+    if (hasMovedRef.current) return;
+    setSelectedId(id);
+
+    // Auto-scroll selected pill into view
+    const pillWidth = 175;
+    const targetX = Math.max(0, index * pillWidth - 40);
+    if (Platform.OS === 'web') {
+      const scrollEl = scrollRef.current as any;
+      const node = scrollEl?.getScrollableNode?.() || scrollEl;
+      if (node && typeof node.scrollTo === 'function') {
+        node.scrollTo({ left: targetX, behavior: 'smooth' });
+        return;
+      }
+    }
+    scrollRef.current?.scrollTo({ x: targetX, animated: true });
+  };
 
   const handleApply = () => {
     const { updated, msg } = currentSymptom.apply(inputs);
@@ -194,44 +313,104 @@ export const TuneDoctorModal: React.FC<TuneDoctorModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Symptom Selection Horizontal Pills */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.pillScroll}
-            contentContainerStyle={styles.pillScrollContent}
-          >
-            {SYMPTOMS.map(s => {
-              const isSelected = s.id === selectedId;
-              return (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[styles.symptomPill, isSelected && { borderColor: s.badgeColor, backgroundColor: '#131c2c' }]}
-                  onPress={() => setSelectedId(s.id)}
-                >
-                  <View style={[styles.badge, { backgroundColor: s.badgeColor }]}>
-                    <Text style={styles.badgeText}>{s.badge}</Text>
-                  </View>
-                  <Text style={[styles.symptomPillText, isSelected && { color: '#ffffff' }]}>
-                    {t(s.titleKey as any)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          {/* Symptom Selection Horizontal Navigation Row with Chevrons */}
+          <View style={styles.pillsWrapper}>
+            <TouchableOpacity
+              style={[styles.arrowBtn, !canScrollLeft && styles.arrowBtnDisabled]}
+              disabled={!canScrollLeft}
+              onPress={() => scrollBy(-180)}
+              accessibilityLabel="Scroll options left"
+            >
+              <Text style={[styles.arrowBtnText, !canScrollLeft && styles.arrowBtnTextDisabled]}>‹</Text>
+            </TouchableOpacity>
 
-          {/* Detailed Diagnosis Card */}
-          <ScrollView style={styles.detailScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              ref={scrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.pillScroll}
+              contentContainerStyle={styles.pillScrollContent}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+            >
+              {SYMPTOMS.map((s, idx) => {
+                const isSelected = s.id === selectedId;
+                return (
+                  <TouchableOpacity
+                    key={s.id}
+                    style={[
+                      styles.symptomPill,
+                      isSelected && [styles.symptomPillSelected, { borderColor: s.badgeColor }],
+                    ]}
+                    onPress={() => handleSelectSymptom(s.id, idx)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.badge, { backgroundColor: s.badgeColor }]}>
+                      <Text style={styles.badgeText}>{s.badge}</Text>
+                    </View>
+                    <Text style={[styles.symptomPillText, isSelected && { color: '#ffffff' }]}>
+                      {t(s.titleKey as any)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.arrowBtn, !canScrollRight && styles.arrowBtnDisabled]}
+              disabled={!canScrollRight}
+              onPress={() => scrollBy(180)}
+              accessibilityLabel="Scroll options right"
+            >
+              <Text style={[styles.arrowBtnText, !canScrollRight && styles.arrowBtnTextDisabled]}>›</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Dots & Counter Indicator */}
+          <View style={styles.indicatorRow}>
+            <View style={styles.dotsContainer}>
+              {SYMPTOMS.map((s, idx) => {
+                const isSelected = s.id === selectedId;
+                return (
+                  <TouchableOpacity
+                    key={s.id}
+                    style={[
+                      styles.dot,
+                      isSelected && [styles.dotActive, { backgroundColor: s.badgeColor }],
+                    ]}
+                    onPress={() => handleSelectSymptom(s.id, idx)}
+                  />
+                );
+              })}
+            </View>
+            <Text style={styles.counterText}>
+              {selectedIndex + 1} / {SYMPTOMS.length}
+            </Text>
+          </View>
+
+          {/* Detailed Diagnosis Card (fully expanded & scrollable on both Mobile and Web) */}
+          <ScrollView
+            style={styles.detailScroll}
+            contentContainerStyle={styles.detailScrollContent}
+            showsVerticalScrollIndicator={true}
+          >
             <View style={styles.diagnosisCard}>
-              <Text style={styles.cardHeaderTitle}>{t(currentSymptom.titleKey as any)}</Text>
-              <Text style={styles.cardHeaderDesc}>{t(currentSymptom.descKey as any)}</Text>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardTitleRow}>
+                  <View style={[styles.badge, { backgroundColor: currentSymptom.badgeColor }]}>
+                    <Text style={styles.badgeText}>{currentSymptom.badge}</Text>
+                  </View>
+                  <Text style={styles.cardHeaderTitle}>{t(currentSymptom.titleKey as any)}</Text>
+                </View>
+                <Text style={styles.cardHeaderDesc}>{t(currentSymptom.descKey as any)}</Text>
+              </View>
 
               <View style={styles.divider} />
 
               <Text style={styles.sectionHeading}>{t('diagnosis')}</Text>
               <Text style={styles.bodyText}>{currentSymptom.diagnosis}</Text>
 
-              <Text style={[styles.sectionHeading, { marginTop: 12 }]}>{t('prescription')}</Text>
+              <Text style={[styles.sectionHeading, { marginTop: 14 }]}>{t('prescription')}</Text>
               {currentSymptom.prescriptions.map((rx, idx) => (
                 <View key={idx} style={styles.rxRow}>
                   <Text style={styles.bullet}>•</Text>
@@ -267,7 +446,9 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 540,
-    maxHeight: '90%',
+    height: '84%',
+    maxHeight: 620,
+    minHeight: 400,
     backgroundColor: '#0f1420',
     borderWidth: 1,
     borderColor: '#1c2438',
@@ -279,7 +460,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   modalTitle: {
     fontSize: 17,
@@ -306,13 +487,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
   },
+  pillsWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  arrowBtn: {
+    width: 26,
+    height: 36,
+    backgroundColor: '#070a10',
+    borderWidth: 1,
+    borderColor: '#1e2638',
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrowBtnDisabled: {
+    opacity: 0.2,
+    borderColor: '#131c2c',
+  },
+  arrowBtnText: {
+    color: '#00f0ff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    lineHeight: 20,
+  },
+  arrowBtnTextDisabled: {
+    color: '#475569',
+  },
   pillScroll: {
+    flex: 1,
     maxHeight: 46,
-    marginBottom: 12,
+    marginHorizontal: 6,
   },
   pillScrollContent: {
     gap: 8,
     paddingVertical: 2,
+    alignItems: 'center',
   },
   symptomPill: {
     flexDirection: 'row',
@@ -324,6 +535,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     gap: 6,
+  },
+  symptomPillSelected: {
+    backgroundColor: '#131c2c',
   },
   badge: {
     paddingHorizontal: 5,
@@ -341,9 +555,41 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+  indicatorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    marginBottom: 10,
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1e2638',
+  },
+  dotActive: {
+    width: 16,
+    borderRadius: 3,
+  },
+  counterText: {
+    fontSize: 10,
+    color: '#64748b',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   detailScroll: {
     flex: 1,
-    marginBottom: 14,
+    minHeight: 200,
+    marginBottom: 12,
+  },
+  detailScrollContent: {
+    paddingBottom: 6,
   },
   diagnosisCard: {
     backgroundColor: '#070a10',
@@ -351,6 +597,15 @@ const styles = StyleSheet.create({
     borderColor: '#1e2638',
     borderRadius: 10,
     padding: 14,
+  },
+  cardHeader: {
+    marginBottom: 4,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
   },
   cardHeaderTitle: {
     color: '#f8fafc',
@@ -360,12 +615,13 @@ const styles = StyleSheet.create({
   cardHeaderDesc: {
     color: '#8a99ad',
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 2,
+    lineHeight: 16,
   },
   divider: {
     height: 1,
     backgroundColor: '#161f30',
-    marginVertical: 12,
+    marginVertical: 10,
   },
   sectionHeading: {
     color: '#00f0ff',
@@ -383,7 +639,7 @@ const styles = StyleSheet.create({
   rxRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginTop: 4,
+    marginTop: 5,
     gap: 6,
   },
   bullet: {
@@ -437,3 +693,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
+
