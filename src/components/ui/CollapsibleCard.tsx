@@ -36,11 +36,13 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
             <Text style={styles.collapsedSummary}>{collapsedSummary}</Text>
           ) : null}
         </View>
-        {collapsed ? (
-          <ChevronDown size={16} color={THEME.textMuted} />
-        ) : (
-          <ChevronUp size={16} color={THEME.accentAmber} />
-        )}
+        <View style={styles.chevronPill}>
+          {collapsed ? (
+            <ChevronDown size={16} color={THEME.textMuted} />
+          ) : (
+            <ChevronUp size={16} color={THEME.accentAmber} />
+          )}
+        </View>
       </TouchableOpacity>
 
       {!collapsed && <View style={styles.cardBody}>{children}</View>}
@@ -53,15 +55,25 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.bgCard,
     borderWidth: 1,
     borderColor: THEME.border,
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 12,
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 14,
   },
   collapsibleHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+  },
+  chevronPill: {
+    width: 30,
+    height: 30,
+    borderRadius: 999,
+    backgroundColor: THEME.bgElevated,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardHeaderLeft: {
     flex: 1,
@@ -70,22 +82,22 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
   },
   cardTitle: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '800',
     color: THEME.accentAmber,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.9,
   },
   collapsedSummary: {
-    fontSize: 10,
+    fontSize: 11,
     color: THEME.textMuted,
-    marginTop: 2,
+    marginTop: 3,
     fontWeight: '600',
   },
   cardBody: {
-    marginTop: 10,
+    marginTop: 12,
   },
 });

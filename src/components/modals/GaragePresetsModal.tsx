@@ -5,6 +5,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -47,7 +48,13 @@ export const GaragePresetsModal: React.FC<GaragePresetsModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.modalOverlay}
       >
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel="Dismiss modal"
+        />
         <View style={styles.modalContent}>
+          <View style={styles.sheetHandle} />
           <Text style={styles.modalTitle}>{t('carGaragePresets')}</Text>
 
           <View style={styles.saveRow}>
@@ -137,27 +144,35 @@ export const GaragePresetsModal: React.FC<GaragePresetsModalProps> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(8,9,11,0.9)',
+    backgroundColor: 'rgba(10, 12, 16, 0.84)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 18,
   },
   modalContent: {
     width: '100%',
     maxWidth: 500,
     backgroundColor: THEME.bgCard,
     borderWidth: 1,
-    borderColor: THEME.border,
-    borderRadius: 12,
-    padding: 18,
+    borderColor: THEME.borderStrong,
+    borderRadius: 28,
+    padding: 20,
+    paddingTop: 12,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: THEME.borderStrong,
+    alignSelf: 'center',
+    marginBottom: 12,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
     color: THEME.textPrimary,
-    textTransform: 'uppercase',
     marginBottom: 12,
-    letterSpacing: 1,
+    letterSpacing: 0.4,
   },
   saveRow: { flexDirection: 'row', gap: 8 },
   input: {
@@ -165,24 +180,24 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.border,
-    borderRadius: 6,
+    borderRadius: 999,
     color: THEME.textPrimary,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    fontSize: 13,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    fontSize: 13.5,
     minWidth: 0,
   },
   saveActionBtn: {
     backgroundColor: THEME.accentBrand,
     borderWidth: 1,
     borderColor: THEME.accentBrand,
-    paddingHorizontal: 14,
+    paddingHorizontal: 18,
     justifyContent: 'center',
-    borderRadius: 6,
+    borderRadius: 999,
   },
-  saveActionBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 12 },
-  label: { fontSize: 11, color: THEME.textSecondary, marginBottom: 4, fontWeight: '600' },
-  emptyText: { color: THEME.textMuted, fontSize: 12, fontStyle: 'italic', marginVertical: 8 },
+  saveActionBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 12.5 },
+  label: { fontSize: 11.5, color: THEME.textSecondary, marginBottom: 6, fontWeight: '600' },
+  emptyText: { color: THEME.textMuted, fontSize: 12.5, fontStyle: 'italic', marginVertical: 10 },
   presetCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -190,10 +205,10 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.border,
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: 18,
+    padding: 12,
     marginBottom: 8,
-    gap: 8,
+    gap: 10,
   },
   presetCardMain: {
     flex: 1,
@@ -205,10 +220,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   presetPiBadge: {
-    paddingHorizontal: 5,
-    paddingVertical: 1.5,
-    borderRadius: 4,
-    minWidth: 22,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    minWidth: 24,
     alignItems: 'center',
   },
   presetPiText: {
@@ -216,17 +231,17 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: '900',
   },
-  presetItemText: { color: THEME.textPrimary, fontSize: 13, fontWeight: '800', flex: 1 },
-  presetCarSub: { color: THEME.textSecondary, fontSize: 11, fontWeight: '600', marginTop: 2 },
-  presetSpecMeta: { color: THEME.accentAmber, fontSize: 10, fontWeight: '600', marginTop: 2 },
+  presetItemText: { color: THEME.textPrimary, fontSize: 13.5, fontWeight: '800', flex: 1 },
+  presetCarSub: { color: THEME.textSecondary, fontSize: 11.5, fontWeight: '600', marginTop: 2 },
+  presetSpecMeta: { color: THEME.accentAmber, fontSize: 10.5, fontWeight: '600', marginTop: 2 },
   presetActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
   presetActionIconBtn: {
-    padding: 7,
-    borderRadius: 6,
+    padding: 9,
+    borderRadius: 999,
     backgroundColor: THEME.bgCard,
     borderWidth: 1,
     borderColor: THEME.borderStrong,
@@ -236,20 +251,20 @@ const styles = StyleSheet.create({
     borderColor: THEME.accentSuccess,
   },
   presetDeleteIconBtn: {
-    padding: 7,
-    borderRadius: 6,
+    padding: 9,
+    borderRadius: 999,
     backgroundColor: THEME.accentDangerDim,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.35)',
+    borderColor: 'rgba(255, 107, 107, 0.35)',
   },
   closeBtn: {
     marginTop: 14,
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
-    borderColor: THEME.border,
-    paddingVertical: 8,
-    borderRadius: 6,
+    borderColor: THEME.borderStrong,
+    paddingVertical: 11,
+    borderRadius: 999,
     alignItems: 'center',
   },
-  closeBtnText: { color: THEME.textSecondary, fontSize: 12, fontWeight: '600' },
+  closeBtnText: { color: THEME.textPrimary, fontSize: 12.5, fontWeight: '700' },
 });

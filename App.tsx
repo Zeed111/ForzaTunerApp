@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   },
   containerMobile: {
     maxWidth: 640,
-    paddingBottom: 92,
+    paddingBottom: 24,
   },
   containerWide: {
     maxWidth: 1220,
@@ -327,16 +327,16 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.bgCard,
     borderWidth: 1,
     borderColor: THEME.border,
-    borderRadius: 9,
-    padding: 3,
+    borderRadius: 999,
+    padding: 4,
     gap: 4,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   mobileTabPill: {
     flex: 1,
-    paddingVertical: 7,
-    paddingHorizontal: 4,
-    borderRadius: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   },
   mobileTabText: {
     color: THEME.textSecondary,
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '800',
     textAlign: 'center',
   },
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   mainGridWide: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 16,
+    gap: 18,
   },
   mainGridNarrow: {
     flexDirection: 'column',

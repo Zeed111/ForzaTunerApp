@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   ScrollView,
   StyleSheet,
   Platform,
@@ -313,7 +314,13 @@ export const CompanionChecklistModal: React.FC<CompanionChecklistModalProps> = (
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel="Dismiss modal"
+        />
         <View style={styles.modalContent}>
+          <View style={styles.sheetHandle} />
           {/* Header */}
           <View style={styles.headerRow}>
             <View style={{ flex: 1, paddingRight: 8 }}>
@@ -444,7 +451,7 @@ export const CompanionChecklistModal: React.FC<CompanionChecklistModalProps> = (
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(8,9,11,0.92)',
+    backgroundColor: 'rgba(10, 12, 16, 0.84)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
@@ -455,57 +462,68 @@ const styles = StyleSheet.create({
     height: '92%',
     backgroundColor: THEME.bgCard,
     borderWidth: 1,
-    borderColor: THEME.border,
-    borderRadius: 14,
-    padding: 16,
+    borderColor: THEME.borderStrong,
+    borderRadius: 28,
+    padding: 18,
+    paddingTop: 12,
     flexDirection: 'column',
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: THEME.borderStrong,
+    alignSelf: 'center',
+    marginBottom: 12,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
     color: THEME.textPrimary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
+    letterSpacing: 0.4,
   },
   modalSubtitle: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: THEME.accentAmber,
     fontWeight: '700',
     marginTop: 2,
   },
   closeBtnSmall: {
-    padding: 6,
-    borderRadius: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 999,
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   progressTrack: {
-    height: 6,
+    height: 8,
     backgroundColor: THEME.bgElevated,
-    borderRadius: 3,
+    borderRadius: 999,
     overflow: 'hidden',
-    marginBottom: 10,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: THEME.border,
   },
   progressBar: {
     height: '100%',
     backgroundColor: THEME.accentBrand,
-    borderRadius: 3,
+    borderRadius: 999,
   },
   toolbarRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 10,
+    marginBottom: 12,
     flexWrap: 'wrap',
   },
   toolbarRight: {
@@ -515,13 +533,13 @@ const styles = StyleSheet.create({
   copyCardBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.borderStrong,
-    borderRadius: 6,
+    borderRadius: 999,
   },
   copyCardBtnCopied: {
     backgroundColor: THEME.accentSuccess,
@@ -529,24 +547,24 @@ const styles = StyleSheet.create({
   },
   copyCardBtnText: {
     color: THEME.accentSteel,
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   copyCardBtnTextCopied: {
     color: THEME.bgCanvas,
   },
   toolBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.border,
-    borderRadius: 5,
+    borderRadius: 999,
   },
   toolBtnText: {
     color: THEME.textSecondary,
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 11.5,
+    fontWeight: '700',
   },
   scrollArea: {
     flex: 1,
@@ -561,10 +579,10 @@ const styles = StyleSheet.create({
     color: THEME.accentAmber,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 6,
+    marginBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: THEME.border,
-    paddingBottom: 3,
+    paddingBottom: 4,
   },
   itemRow: {
     flexDirection: 'row',
@@ -572,21 +590,21 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.border,
-    borderRadius: 7,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    marginBottom: 4,
-    gap: 8,
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 6,
+    gap: 10,
   },
   itemRowChecked: {
     backgroundColor: THEME.bgCanvas,
-    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderColor: 'rgba(74, 222, 128, 0.35)',
     opacity: 0.72,
   },
   checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 7,
     borderWidth: 1.5,
     borderColor: THEME.borderStrong,
     alignItems: 'center',
@@ -596,13 +614,14 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: THEME.accentSuccess,
     borderColor: THEME.accentSuccess,
+    borderRadius: 999,
   },
   itemInfo: {
     flex: 1,
   },
   itemLabel: {
     color: THEME.textPrimary,
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '600',
   },
   itemLabelChecked: {
@@ -611,13 +630,13 @@ const styles = StyleSheet.create({
   },
   itemSubValue: {
     color: THEME.accentSteel,
-    fontSize: 10,
+    fontSize: 10.5,
     fontStyle: 'italic',
     marginTop: 1,
   },
   itemValue: {
     color: THEME.textPrimary,
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
     marginRight: 6,
@@ -626,12 +645,12 @@ const styles = StyleSheet.create({
     color: THEME.textMuted,
   },
   copyBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     backgroundColor: THEME.bgCard,
     borderWidth: 1,
-    borderColor: THEME.border,
-    borderRadius: 4,
+    borderColor: THEME.borderStrong,
+    borderRadius: 999,
   },
   copyBtnCopied: {
     backgroundColor: THEME.accentSuccess,
@@ -639,7 +658,7 @@ const styles = StyleSheet.create({
   },
   copyBtnText: {
     color: THEME.textSecondary,
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '700',
   },
   copyBtnTextCopied: {
@@ -647,15 +666,14 @@ const styles = StyleSheet.create({
   },
   bottomCloseBtn: {
     backgroundColor: THEME.accentBrand,
-    borderRadius: 8,
-    paddingVertical: 10,
+    borderRadius: 999,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   bottomCloseBtnText: {
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
 });

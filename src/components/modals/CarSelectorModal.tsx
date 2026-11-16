@@ -5,6 +5,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -97,7 +98,13 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.modalOverlay}
       >
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel="Dismiss modal"
+        />
         <View style={styles.modalContent}>
+          <View style={styles.sheetHandle} />
           <View style={styles.headerRow}>
             <Text style={styles.modalTitle}>{t('selectVehicle', { count: filteredCars.length })}</Text>
             {hasActiveFilters && (
@@ -140,7 +147,7 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
                   key={`pi-${pi}`}
                   style={[
                     styles.filterChip,
-                    isActive && { backgroundColor: piColor, borderColor: piColor },
+                    isActive && [styles.filterChipActive, { backgroundColor: piColor, borderColor: piColor }],
                   ]}
                   onPress={() => setSelectedPi(pi)}
                 >
@@ -271,66 +278,72 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(8,9,11,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  modalContent: { width: '100%', maxWidth: 520, backgroundColor: THEME.bgCard, borderWidth: 1, borderColor: THEME.border, borderRadius: 12, padding: 16 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(10, 12, 16, 0.84)', justifyContent: 'center', alignItems: 'center', padding: 16 },
+  modalContent: { width: '100%', maxWidth: 520, backgroundColor: THEME.bgCard, borderWidth: 1, borderColor: THEME.borderStrong, borderRadius: 28, padding: 18, paddingTop: 12 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 999, backgroundColor: THEME.borderStrong, alignSelf: 'center', marginBottom: 12 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  modalTitle: { fontSize: 16, fontWeight: '900', color: THEME.textPrimary, textTransform: 'uppercase', letterSpacing: 1 },
+  modalTitle: { fontSize: 17, fontWeight: '900', color: THEME.textPrimary, letterSpacing: 0.3 },
   resetFiltersBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 999,
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.borderStrong,
   },
-  resetFiltersText: { color: THEME.accentSteel, fontSize: 10, fontWeight: '700' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, position: 'relative' },
-  searchIcon: { position: 'absolute', left: 10, zIndex: 1 },
+  resetFiltersText: { color: THEME.accentSteel, fontSize: 11, fontWeight: '700' },
+  searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, position: 'relative' },
+  searchIcon: { position: 'absolute', left: 14, zIndex: 1 },
   searchInput: {
     flex: 1,
     minWidth: 0,
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.border,
-    borderRadius: 6,
+    borderRadius: 999,
     color: THEME.textPrimary,
-    paddingLeft: 32,
-    paddingRight: 36,
-    paddingVertical: 8,
-    fontSize: 13,
+    paddingLeft: 38,
+    paddingRight: 40,
+    paddingVertical: 10,
+    fontSize: 13.5,
   },
-  clearSearchBtn: { position: 'absolute', right: 10, padding: 4 },
+  clearSearchBtn: { position: 'absolute', right: 12, padding: 4 },
   filterScroll: { flexGrow: 0, marginBottom: 6 },
   filterScrollContent: { gap: 6, alignItems: 'center', paddingVertical: 1 },
   filterChip: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 12,
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.border,
   },
+  filterChipActive: {
+    borderRadius: 999,
+  },
   filterChipActiveCyan: {
     backgroundColor: THEME.accentSteelDim,
     borderColor: THEME.accentSteel,
+    borderRadius: 999,
   },
   filterChipActiveRed: {
     backgroundColor: THEME.accentBrand,
     borderColor: THEME.accentBrand,
+    borderRadius: 999,
   },
-  filterChipText: { color: THEME.textSecondary, fontSize: 10, fontWeight: '800' },
+  filterChipText: { color: THEME.textSecondary, fontSize: 11, fontWeight: '800' },
   filterChipTextActive: { color: '#ffffff' },
-  chipDivider: { width: 1, height: 16, backgroundColor: THEME.border, marginHorizontal: 2 },
-  carItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: THEME.border },
-  carName: { color: THEME.textPrimary, fontSize: 13, fontWeight: '700' },
+  chipDivider: { width: 1, height: 18, backgroundColor: THEME.borderStrong, marginHorizontal: 3 },
+  carItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: THEME.border },
+  carName: { color: THEME.textPrimary, fontSize: 13.5, fontWeight: '700' },
   carMeta: { color: THEME.textSecondary, fontSize: 11, marginTop: 2 },
-  piBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, minWidth: 28, alignItems: 'center' },
+  piBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, minWidth: 32, alignItems: 'center' },
   piBadgeText: { color: '#ffffff', fontSize: 11, fontWeight: '900' },
   emptyContainer: { paddingVertical: 30, alignItems: 'center' },
   emptyText: { color: THEME.textMuted, fontSize: 13, fontStyle: 'italic', textAlign: 'center' },
-  closeBtn: { marginTop: 12, backgroundColor: THEME.bgElevated, borderWidth: 1, borderColor: THEME.border, paddingVertical: 10, borderRadius: 6, alignItems: 'center' },
-  closeBtnText: { color: THEME.textSecondary, fontSize: 12, fontWeight: '700' },
+  closeBtn: { marginTop: 14, backgroundColor: THEME.bgElevated, borderWidth: 1, borderColor: THEME.borderStrong, paddingVertical: 11, borderRadius: 999, alignItems: 'center' },
+  closeBtnText: { color: THEME.textPrimary, fontSize: 12.5, fontWeight: '700' },
 });

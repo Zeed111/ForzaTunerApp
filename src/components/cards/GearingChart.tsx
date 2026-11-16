@@ -133,7 +133,7 @@ export const GearingChart: React.FC<GearingChartProps> = ({
     >
       <Svg width={width} height={height}>
         {/* Background */}
-        <Rect width={width} height={height} fill={THEME.bgCanvas} rx={8} />
+        <Rect width={width} height={height} fill={THEME.bgCanvas} rx={16} />
 
         {/* Powerband Optimal RPM Shaded Zone */}
         <Rect
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginVertical: 10,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: THEME.border,

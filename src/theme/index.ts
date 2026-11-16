@@ -1,41 +1,41 @@
 export const THEME = {
-  // Surfaces (Warm Asphalt Carbon & Matte Graphite)
-  bgCanvas: '#0B0C0E',
-  bgCard: '#131519',
-  bgElevated: '#1A1D23',
-  bgSubtle: '#22262E',
-  border: '#262A33',
-  borderStrong: '#363B47',
+  // Surfaces (Android 17 Material 3 Expressive Dark Tonal Surfaces)
+  bgCanvas: '#0E1015', // M3 surfaceDim
+  bgCard: '#171A21', // M3 surfaceContainerLow
+  bgElevated: '#20242E', // M3 surfaceContainerHigh
+  bgSubtle: '#2B303E', // M3 surfaceContainerHighest
+  border: 'rgba(255, 255, 255, 0.08)', // M3 outlineVariant
+  borderStrong: 'rgba(255, 255, 255, 0.16)', // M3 outline
 
   // Typography
-  textPrimary: '#F3F4F6',
-  textSecondary: '#9CA3AF',
-  textMuted: '#6B7280',
+  textPrimary: '#F2F4FA', // M3 onSurface
+  textSecondary: '#C2C7D6', // M3 onSurfaceVariant
+  textMuted: '#8B92A5', // M3 outline
 
-  // Cohesive Motorsport Accents
-  accentBrand: '#F97316', // Horizon Racing Orange
-  accentBrandDim: 'rgba(249, 115, 22, 0.14)',
-  accentAmber: '#F59E0B', // MoTeC Shift-Light Amber
-  accentAmberDim: 'rgba(245, 158, 11, 0.14)',
-  accentSteel: '#38BDF8', // Anodized Telemetry Steel Blue
-  accentSteelDim: 'rgba(56, 189, 248, 0.14)',
-  accentSuccess: '#10B981', // Pit-Wall Emerald Confirmation
-  accentSuccessDim: 'rgba(16, 185, 129, 0.14)',
-  accentDanger: '#EF4444', // Brake Caliper Red
-  accentDangerDim: 'rgba(239, 68, 68, 0.14)',
+  // Material 3 Expressive Motorsport Tonal Accents
+  accentBrand: '#FF6D2E', // M3 Primary Expressive Coral-Orange
+  accentBrandDim: 'rgba(255, 109, 46, 0.18)',
+  accentAmber: '#FFB74D', // M3 Secondary Amber
+  accentAmberDim: 'rgba(255, 183, 77, 0.16)',
+  accentSteel: '#7AD0FF', // M3 Tertiary Telemetry Cyan
+  accentSteelDim: 'rgba(122, 208, 255, 0.16)',
+  accentSuccess: '#4ADE80', // M3 Emerald Confirmation
+  accentSuccessDim: 'rgba(74, 222, 128, 0.16)',
+  accentDanger: '#FF6B6B', // M3 Error / Alert Red
+  accentDangerDim: 'rgba(255, 107, 107, 0.16)',
 } as const;
 
 export const GEAR_CHART_COLORS = [
-  '#F97316',
-  '#F59E0B',
-  '#EAB308',
-  '#10B981',
-  '#06B6D4',
+  '#FF6D2E',
+  '#FFB74D',
+  '#FCD34D',
+  '#4ADE80',
   '#38BDF8',
-  '#60A5FA',
+  '#7AD0FF',
   '#818CF8',
   '#A78BFA',
-  '#F43F5E',
+  '#F472B6',
+  '#FF6B6B',
 ];
 
 export function getPiColor(piClass?: string): string {

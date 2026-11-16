@@ -97,14 +97,18 @@ const styles = StyleSheet.create({
   label: { fontSize: 11, color: THEME.textSecondary, marginBottom: 4, fontWeight: '600' },
   pillGroupFull: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
   subPill: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
     backgroundColor: THEME.bgElevated,
-    borderRadius: 6,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: THEME.border,
   },
-  subPillActive: { backgroundColor: THEME.accentBrand, borderColor: THEME.accentBrand },
-  subPillText: { color: THEME.textSecondary, fontSize: 11, fontWeight: '700' },
+  subPillActive: {
+    backgroundColor: THEME.accentBrand,
+    borderColor: THEME.accentBrand,
+    borderRadius: 999,
+  },
+  subPillText: { color: THEME.textSecondary, fontSize: 11.5, fontWeight: '700' },
   subPillTextActive: { color: '#ffffff' },
 });

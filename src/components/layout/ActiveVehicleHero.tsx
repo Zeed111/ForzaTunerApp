@@ -39,18 +39,31 @@ export const ActiveVehicleHero: React.FC<ActiveVehicleHeroProps> = ({
             {inputs.carName || t('customBuild')}
           </Text>
         </View>
-        <Text style={styles.heroMeta}>
-          {`${inputs.drivetrain} • ${Math.round(inputs.hp)} HP • ${t('powerToWeight', { ptw: ptwVal })} • ${inputs.discipline.toUpperCase()}`}
-        </Text>
+        <View style={styles.heroMetaChips}>
+          <View style={styles.heroMetaChip}>
+            <Text style={styles.heroMetaChipText}>{inputs.drivetrain}</Text>
+          </View>
+          <View style={styles.heroMetaChip}>
+            <Text style={styles.heroMetaChipText}>{`${Math.round(inputs.hp)} HP`}</Text>
+          </View>
+          <View style={styles.heroMetaChip}>
+            <Text style={styles.heroMetaChipText}>{t('powerToWeight', { ptw: ptwVal })}</Text>
+          </View>
+          <View style={[styles.heroMetaChip, styles.heroMetaChipAccent]}>
+            <Text style={[styles.heroMetaChipText, styles.heroMetaChipTextAccent]}>
+              {inputs.discipline.toUpperCase()}
+            </Text>
+          </View>
+        </View>
       </View>
 
       <View style={styles.heroActions}>
         <TouchableOpacity style={styles.heroActionPrimary} onPress={onChangeCar}>
-          <Car size={12} color="#ffffff" strokeWidth={2.4} />
+          <Car size={13} color="#ffffff" strokeWidth={2.4} />
           <Text style={styles.heroActionPrimaryText}>{t('changeCar')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.heroActionSecondary} onPress={onSaveTune}>
-          <Bookmark size={12} color={THEME.textPrimary} strokeWidth={2.2} />
+          <Bookmark size={13} color={THEME.textPrimary} strokeWidth={2.2} />
           <Text style={styles.heroActionSecondaryText}>{t('saveTune')}</Text>
         </TouchableOpacity>
       </View>
@@ -64,15 +77,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     backgroundColor: THEME.bgCard,
     borderWidth: 1,
     borderColor: THEME.border,
-    borderLeftWidth: 3,
-    borderLeftColor: THEME.accentBrand,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 14,
   },
   heroLeft: {
     flex: 1,
@@ -82,10 +93,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   heroKicker: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: '800',
     color: THEME.textMuted,
     letterSpacing: 1,
@@ -93,81 +104,101 @@ const styles = StyleSheet.create({
   heroPresetTag: {
     backgroundColor: THEME.accentBrandDim,
     borderWidth: 1,
-    borderColor: 'rgba(249, 115, 22, 0.45)',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    borderColor: 'rgba(255, 109, 46, 0.45)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   heroPresetTagText: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: '700',
     color: THEME.accentBrand,
   },
   heroTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 9,
   },
   heroPiBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 4,
-    minWidth: 26,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 10,
+    minWidth: 30,
     alignItems: 'center',
   },
   heroPiBadgeText: {
     color: '#ffffff',
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '900',
   },
   heroCarName: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '900',
     color: THEME.textPrimary,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
-  heroMeta: {
-    fontSize: 11,
+  heroMetaChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  heroMetaChip: {
+    backgroundColor: THEME.bgElevated,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  heroMetaChipAccent: {
+    backgroundColor: THEME.accentAmberDim,
+    borderColor: 'rgba(255, 183, 77, 0.35)',
+  },
+  heroMetaChipText: {
+    fontSize: 10.5,
     color: THEME.textSecondary,
-    marginTop: 4,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  heroMetaChipTextAccent: {
+    color: THEME.accentAmber,
   },
   heroActions: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
     alignItems: 'center',
   },
   heroActionPrimary: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: THEME.accentBrand,
     borderWidth: 1,
     borderColor: THEME.accentBrand,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 999,
   },
   heroActionPrimaryText: {
     color: '#ffffff',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   heroActionSecondary: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.borderStrong,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 999,
   },
   heroActionSecondaryText: {
     color: THEME.textPrimary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
 });
