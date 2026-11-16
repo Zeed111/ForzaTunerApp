@@ -1,5 +1,5 @@
 import carJson from './cars.json';
-import { VehicleInputs } from '../tuningEngine';
+import { VehicleInputs } from '../types/tuning';
 
 export interface PredefinedCar {
   id: string;
