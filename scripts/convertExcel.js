@@ -1,9 +1,13 @@
-/* eslint-env node */
+/* global __dirname */
 const fs = require('fs');
+const path = require('path');
 const xlsx = require('xlsx');
 
+const INPUT_XLSX = path.join(__dirname, 'Forza Horizon 6 Car List.xlsx');
+const OUTPUT_JSON = path.join(__dirname, '..', 'src', 'data', 'cars.json');
+
 // 1. Load workbook & target the stats sheet
-const workbook = xlsx.readFile('./Forza Horizon 6 Car List.xlsx');
+const workbook = xlsx.readFile(INPUT_XLSX);
 const targetSheetName = workbook.SheetNames.includes('Detailed Car List + Stats')
   ? 'Detailed Car List + Stats'
   : workbook.SheetNames[workbook.SheetNames.length - 1];
@@ -118,5 +122,5 @@ const formattedCars = rawData.map((row, index) => {
 });
 
 // Ensure directory exists & save
-fs.writeFileSync('./src/data/cars.json', JSON.stringify(formattedCars, null, 2));
-console.log(`\nSuccessfully converted ${formattedCars.length} cars into ./src/data/cars.json with real technical stats!`);
+fs.writeFileSync(OUTPUT_JSON, JSON.stringify(formattedCars, null, 2));
+console.log(`\nSuccessfully converted ${formattedCars.length} cars into src/data/cars.json with real technical stats!`);
