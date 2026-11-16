@@ -1,4 +1,4 @@
-import { UnitSystem, VehicleInputs } from '../tuningEngine';
+import { UnitSystem, VehicleInputs } from '../types/tuning';
 
 export const KG_TO_LBS = 2.2046226218;
 export const KGF_MM_TO_LB_IN = 55.99741459;
