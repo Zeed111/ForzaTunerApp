@@ -3,9 +3,12 @@ export const translations = {
     // Car Selector Modal
     selectVehicle: 'Select Vehicle ({{count}})',
     noVehiclesMatching: 'No vehicles matching "{{search}}"',
+    noVehiclesMatchFilters: 'No vehicles match the selected filters',
+    filterAll: 'ALL',
+    resetFilters: 'Reset Filters',
     cancel: 'Cancel',
     searchPlaceholder: 'Search manufacturer, model, or year...',
-    carSpecsMeta: '{{drivetrain}} • {{hp}} HP • {{category}}',
+    carSpecsMeta: '{{drivetrain}} • {{hp}} HP • {{weight}} {{wtUnit}} • {{frontPct}}% F • {{category}}',
     clearSymbol: '✕',
 
     // Top Bar & Header
@@ -38,6 +41,23 @@ export const translations = {
     prescription: 'Prescription & Adjustments:',
     applyFix: 'Apply Recommended Fix',
     fixApplied: 'Fix Applied!',
+    liveTelemetryImpact: 'Live Telemetry Impact (Before → After):',
+    resetDoctorTweaks: 'Reset Doctor Tweaks',
+    doctorTweaksResetMsg: 'Cleared Tune Doctor fine-tune offsets and reset Handling Bias.',
+    doctorFixesActive: 'Doctor Tweaks Active',
+    noDirectChangesNeeded: 'Current tune values already reflect this prescription.',
+    diagnosisentry_understeer:
+      'Front tires are overloaded or front anti-roll bar is too stiff, preventing the car from pivoting into the corner on initial turn-in.',
+    diagnosisexit_oversteer:
+      'Rear differential acceleration lock is too aggressive, or rear anti-roll bar is too rigid, causing the rear tires to break loose when applying power out of corners.',
+    diagnosismid_corner_push:
+      'Rear anti-roll bar is too compliant relative to front, causing the front tires to wash out through the mid-corner apex.',
+    diagnosiscurb_instability:
+      'Suspension ride height is too low or bump damping is too stiff, bottoming out against bump stops over curbs and violently unsettling the chassis.',
+    diagnosislaunch_wheelspin:
+      'Rear tire width is too narrow for current horsepower, 1st gear ratio is too short, or rear tire pressure is overinflated.',
+    diagnosishigh_speed_wander:
+      'Front aerodynamic downforce is insufficient relative to rear wing, or front toe is excessively out, causing high-speed nervousness.',
     // Alerts & Confirmations
     errorTitle: 'Error',
     enterPresetNameMsg: 'Please enter a preset name',
@@ -121,6 +141,32 @@ export const translations = {
     highTorque: 'High Torque (V8/Diesel)',
     electricEV: 'Electric (EV / Direct)',
 
+    // Active Vehicle Banner & Section Headers
+    activeVehicle: 'ACTIVE VEHICLE',
+    customBuild: 'Custom Spec Build',
+    changeCar: 'Change Car',
+    saveTune: 'Save Tune',
+    powerToWeight: '{{ptw}} HP/t',
+    matchFrontTires: 'Match Front',
+    staggerPlus30: '+30mm Stagger',
+    viewTune: 'View Tune',
+    targetHotTelemetry: '↳ Target Hot (Telemetry):',
+    handlingBalanceSub: '↳ Handling Balance:',
+    secTiresAlignment: 'Tires & Alignment',
+    secSuspensionDamping: 'Suspension & Damping',
+    secAeroBrakesDiff: 'Aero, Brakes & Diff',
+    tabSpecs: '1. Specs & Tires',
+    tabLimits: '2. Limits & Gears',
+    tabTune: '3. Tune Sheet',
+    tabAll: 'All',
+    autoScaleLimits: 'Auto-Scale from Weight',
+    filterAllTabs: 'All',
+    filterTiresAlign: 'Tires & Align',
+    filterSuspension: 'Suspension',
+    filterAeroDiff: 'Aero & Diff',
+    filterGearing: 'Gearing',
+    tapRowToCopyHint: 'Tap any row to copy value',
+
     // Output Card
     calculatedTuneSetup: 'Calculated Tune Setup',
     tirePressureFR: 'Tire Pressure (F / R):',
@@ -143,7 +189,7 @@ export const translations = {
     aeroDragAdvisory: 'Aero Drag Advisory',
     gearPrefix: 'G{{num}}',
 
-    // Garage Modal
+    // Garage Modal & Companion Checklist
     carGaragePresets: 'Car Garage Presets',
     newPresetPlaceholder: 'New Preset Name (e.g. R34 Drift)',
     save: 'Save',
@@ -151,6 +197,23 @@ export const translations = {
     noPresetsSaved: 'No presets saved yet.',
     delete: 'Delete',
     close: 'Close',
+    inGameTuneCompanion: 'IN-GAME TUNE COMPANION',
+    appliedProgress: '{{checked}} of {{total}} Applied ({{pct}}%)',
+    checkAll: 'Check All',
+    copyTuneCard: 'Copy Tune Card',
+    tuneCardCopied: 'Copied!',
+    doneTuning: 'Done Tuning',
+    copy: 'Copy',
+    copied: 'Copied',
+    catTires: '1. TIRES',
+    catGearing: '2. GEARING',
+    catAlignment: '3. ALIGNMENT',
+    catArbs: '4. ANTI-ROLL BARS',
+    catSprings: '5. SPRINGS & RIDE HEIGHT',
+    catDamping: '6. DAMPING',
+    catAero: '7. AERO DOWNFORCE',
+    catBrakes: '8. BRAKES',
+    catDiff: '9. DIFFERENTIAL',
   },
 };
 
