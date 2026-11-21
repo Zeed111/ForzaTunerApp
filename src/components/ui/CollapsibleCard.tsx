@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { THEME } from '../../theme';
 
@@ -20,8 +20,11 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   collapsedSummary,
   children,
 }) => {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 520;
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, isCompact && styles.cardCompact]}>
       <TouchableOpacity
         style={styles.collapsibleHeader}
         onPress={onToggle}
@@ -58,6 +61,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 18,
     marginBottom: 14,
+  },
+  cardCompact: {
+    padding: 14,
   },
   collapsibleHeader: {
     flexDirection: 'row',
