@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { Sliders, Sparkles } from 'lucide-react-native';
 import { VehicleInputs } from '../../types/tuning';
 import { CollapsibleCard } from '../ui/CollapsibleCard';
@@ -25,6 +25,8 @@ export const SuspensionLimitsCard: React.FC<SuspensionLimitsCardProps> = ({
   collapsed,
   onToggleCollapse,
 }) => {
+  const { width } = useWindowDimensions();
+  const stackAxes = width < 600;
   const isImp = inputs.units === 'imperial';
   const currentBias = inputs.handlingBias || 0;
 
@@ -43,90 +45,130 @@ export const SuspensionLimitsCard: React.FC<SuspensionLimitsCardProps> = ({
         </TouchableOpacity>
       </View>
 
-      <View style={styles.row}>
-        <View style={styles.col}>
+      <View style={[styles.row, stackAxes && styles.rowStacked]}>
+        <View style={stackAxes ? styles.colFull : styles.col}>
           <Text style={styles.label}>{t('frontSprings', { unit: isImp ? 'lb/in' : 'kgf/mm' })}</Text>
-          <View style={styles.rowTight}>
+          <View style={stackAxes ? styles.rowTightStacked : styles.rowTight}>
             <NumericInput
               style={styles.inputHalf}
+              fieldId="spring-front-min"
+              fieldLabel="Front Springs • MIN"
+              fieldOrder={301}
               labelPrefix="MIN"
               placeholder={t('placeholderMin')}
               value={inputs.springFrontMin}
               decimals={1}
+              min={0}
+              maxLength={7}
               onValueChange={v => onUpdateNumeric('springFrontMin', v)}
             />
             <NumericInput
               style={styles.inputHalf}
+              fieldId="spring-front-max"
+              fieldLabel="Front Springs • MAX"
+              fieldOrder={302}
               labelPrefix="MAX"
               placeholder={t('placeholderMax')}
               value={inputs.springFrontMax}
               decimals={1}
+              min={0}
+              maxLength={7}
               onValueChange={v => onUpdateNumeric('springFrontMax', v)}
             />
           </View>
         </View>
-        <View style={styles.col}>
+        <View style={stackAxes ? styles.colFull : styles.col}>
           <Text style={styles.label}>{t('rearSprings', { unit: isImp ? 'lb/in' : 'kgf/mm' })}</Text>
-          <View style={styles.rowTight}>
+          <View style={stackAxes ? styles.rowTightStacked : styles.rowTight}>
             <NumericInput
               style={styles.inputHalf}
+              fieldId="spring-rear-min"
+              fieldLabel="Rear Springs • MIN"
+              fieldOrder={303}
               labelPrefix="MIN"
               placeholder={t('placeholderMin')}
               value={inputs.springRearMin}
               decimals={1}
+              min={0}
+              maxLength={7}
               onValueChange={v => onUpdateNumeric('springRearMin', v)}
             />
             <NumericInput
               style={styles.inputHalf}
+              fieldId="spring-rear-max"
+              fieldLabel="Rear Springs • MAX"
+              fieldOrder={304}
               labelPrefix="MAX"
               placeholder={t('placeholderMax')}
               value={inputs.springRearMax}
               decimals={1}
+              min={0}
+              maxLength={7}
               onValueChange={v => onUpdateNumeric('springRearMax', v)}
             />
           </View>
         </View>
       </View>
 
-      <View style={[styles.row, { marginTop: 6 }]}>
-        <View style={styles.col}>
+      <View style={[styles.row, { marginTop: 6 }, stackAxes && styles.rowStacked]}>
+        <View style={stackAxes ? styles.colFull : styles.col}>
           <Text style={styles.label}>{t('frontRideHeight', { unit: isImp ? 'in' : 'cm' })}</Text>
-          <View style={styles.rowTight}>
+          <View style={stackAxes ? styles.rowTightStacked : styles.rowTight}>
             <NumericInput
               style={styles.inputHalf}
+              fieldId="height-front-min"
+              fieldLabel="Front Ride Height • MIN"
+              fieldOrder={305}
               labelPrefix="MIN"
               placeholder={t('placeholderMin')}
               value={inputs.heightFrontMin}
               decimals={1}
+              min={0}
+              maxLength={7}
               onValueChange={v => onUpdateNumeric('heightFrontMin', v)}
             />
             <NumericInput
               style={styles.inputHalf}
+              fieldId="height-front-max"
+              fieldLabel="Front Ride Height • MAX"
+              fieldOrder={306}
               labelPrefix="MAX"
               placeholder={t('placeholderMax')}
               value={inputs.heightFrontMax}
               decimals={1}
+              min={0}
+              maxLength={7}
               onValueChange={v => onUpdateNumeric('heightFrontMax', v)}
             />
           </View>
         </View>
-        <View style={styles.col}>
+        <View style={stackAxes ? styles.colFull : styles.col}>
           <Text style={styles.label}>{t('rearRideHeight', { unit: isImp ? 'in' : 'cm' })}</Text>
-          <View style={styles.rowTight}>
+          <View style={stackAxes ? styles.rowTightStacked : styles.rowTight}>
             <NumericInput
               style={styles.inputHalf}
+              fieldId="height-rear-min"
+              fieldLabel="Rear Ride Height • MIN"
+              fieldOrder={307}
               labelPrefix="MIN"
               placeholder={t('placeholderMin')}
               value={inputs.heightRearMin}
               decimals={1}
+              min={0}
+              maxLength={7}
               onValueChange={v => onUpdateNumeric('heightRearMin', v)}
             />
             <NumericInput
               style={styles.inputHalf}
+              fieldId="height-rear-max"
+              fieldLabel="Rear Ride Height • MAX"
+              fieldOrder={308}
               labelPrefix="MAX"
               placeholder={t('placeholderMax')}
               value={inputs.heightRearMax}
               decimals={1}
+              min={0}
+              maxLength={7}
               onValueChange={v => onUpdateNumeric('heightRearMax', v)}
             />
           </View>
@@ -164,8 +206,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   row: { flexDirection: 'row', gap: 8, marginBottom: 8, width: '100%' },
+  rowStacked: { flexDirection: 'column', gap: 10 },
   rowTight: { flexDirection: 'row', gap: 4, flex: 1, minWidth: 0 },
+  rowTightStacked: { flexDirection: 'row', gap: 8, width: '100%' },
   col: { flex: 1, minWidth: 0 },
+  colFull: { width: '100%' },
   label: { fontSize: 11, color: THEME.textSecondary, marginBottom: 4, fontWeight: '600' },
   inputHalf: { flex: 1, minWidth: 0 },
 });

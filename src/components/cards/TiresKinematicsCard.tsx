@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { TireCompound, VehicleInputs } from '../../types/tuning';
 import { CollapsibleCard } from '../ui/CollapsibleCard';
 import { NumericInput } from '../ui/NumericInput';
@@ -21,6 +21,8 @@ export const TiresKinematicsCard: React.FC<TiresKinematicsCardProps> = ({
   collapsed,
   onToggleCollapse,
 }) => {
+  const { width } = useWindowDimensions();
+  const isNarrow = width < 520;
   const isImp = inputs.units === 'imperial';
   const diaF = (2 * (inputs.tWidthF * (inputs.tProfileF / 100)) + inputs.tRimF * 25.4) / 1000;
   const diaR = (2 * (inputs.tWidthR * (inputs.tProfileR / 100)) + inputs.tRimR * 25.4) / 1000;
@@ -60,34 +62,49 @@ export const TiresKinematicsCard: React.FC<TiresKinematicsCardProps> = ({
       </View>
 
       <Text style={styles.label}>{t('frontTireLabel')}</Text>
-      <View style={styles.row}>
+      <View style={[styles.row, isNarrow && styles.rowCompact]}>
         <NumericInput
           style={styles.col}
+          fieldId="tire-front-w"
+          fieldLabel="Front Tire • W"
+          fieldOrder={201}
           labelPrefix="W"
           placeholder={t('placeholderWidth')}
           value={inputs.tWidthF}
+          decimals={0}
           min={125}
           max={455}
+          maxLength={4}
           step={10}
           onValueChange={v => onUpdateNumeric('tWidthF', v)}
         />
         <NumericInput
           style={styles.col}
+          fieldId="tire-front-asp"
+          fieldLabel="Front Tire • ASP"
+          fieldOrder={202}
           labelPrefix="ASP"
           placeholder={t('placeholderProfile')}
           value={inputs.tProfileF}
+          decimals={0}
           min={15}
           max={85}
+          maxLength={4}
           step={5}
           onValueChange={v => onUpdateNumeric('tProfileF', v)}
         />
         <NumericInput
           style={styles.col}
+          fieldId="tire-front-rim"
+          fieldLabel="Front Tire • RIM"
+          fieldOrder={203}
           labelPrefix="RIM"
           placeholder={t('placeholderRim')}
           value={inputs.tRimF}
+          decimals={0}
           min={12}
           max={26}
+          maxLength={4}
           step={1}
           onValueChange={v => onUpdateNumeric('tRimF', v)}
         />
@@ -128,34 +145,49 @@ export const TiresKinematicsCard: React.FC<TiresKinematicsCardProps> = ({
           </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.row}>
+      <View style={[styles.row, isNarrow && styles.rowCompact]}>
         <NumericInput
           style={styles.col}
+          fieldId="tire-rear-w"
+          fieldLabel="Rear Tire • W"
+          fieldOrder={204}
           labelPrefix="W"
           placeholder={t('placeholderWidth')}
           value={inputs.tWidthR}
+          decimals={0}
           min={125}
           max={455}
+          maxLength={4}
           step={10}
           onValueChange={v => onUpdateNumeric('tWidthR', v)}
         />
         <NumericInput
           style={styles.col}
+          fieldId="tire-rear-asp"
+          fieldLabel="Rear Tire • ASP"
+          fieldOrder={205}
           labelPrefix="ASP"
           placeholder={t('placeholderProfile')}
           value={inputs.tProfileR}
+          decimals={0}
           min={15}
           max={85}
+          maxLength={4}
           step={5}
           onValueChange={v => onUpdateNumeric('tProfileR', v)}
         />
         <NumericInput
           style={styles.col}
+          fieldId="tire-rear-rim"
+          fieldLabel="Rear Tire • RIM"
+          fieldOrder={206}
           labelPrefix="RIM"
           placeholder={t('placeholderRim')}
           value={inputs.tRimR}
+          decimals={0}
           min={12}
           max={26}
+          maxLength={4}
           step={1}
           onValueChange={v => onUpdateNumeric('tRimR', v)}
         />
@@ -189,6 +221,7 @@ const styles = StyleSheet.create({
   subPillText: { color: THEME.textSecondary, fontSize: 11.5, fontWeight: '700' },
   subPillTextActive: { color: '#ffffff' },
   row: { flexDirection: 'row', gap: 8, marginBottom: 8, width: '100%' },
+  rowCompact: { gap: 6 },
   col: { flex: 1, minWidth: 0 },
   badgeInfo: {
     fontSize: 10.5,

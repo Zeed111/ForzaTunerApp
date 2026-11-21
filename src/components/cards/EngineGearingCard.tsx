@@ -6,6 +6,8 @@ import { NumericInput } from '../ui/NumericInput';
 import { THEME } from '../../theme';
 import { t } from '../../i18n';
 
+const GEAR_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+
 interface EngineGearingCardProps {
   inputs: VehicleInputs;
   onUpdateInputs: (updater: (prev: VehicleInputs) => VehicleInputs) => void;
@@ -32,37 +34,65 @@ export const EngineGearingCard: React.FC<EngineGearingCardProps> = ({
     >
       <View style={styles.row}>
         <View style={styles.col}>
-          <Text style={styles.label}>{t('redlineRpm')}</Text>
+          <Text style={styles.label} numberOfLines={1}>{t('redlineRpm')}</Text>
           <NumericInput
+            fieldId="engine-redline"
+            fieldLabel="Engine • Redline RPM"
+            fieldOrder={501}
             value={inputs.redlineRpm}
+            decimals={0}
             min={2000}
             max={22000}
+            maxLength={5}
             onValueChange={v => onUpdateNumeric('redlineRpm', v)}
           />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>{t('topSpeed', { unit: isImp ? 'mph' : 'km/h' })}</Text>
+          <Text style={styles.label} numberOfLines={1}>{t('topSpeed', { unit: isImp ? 'mph' : 'km/h' })}</Text>
           <NumericInput
+            fieldId="engine-top-speed"
+            fieldLabel="Engine • Top Speed"
+            fieldOrder={502}
             value={inputs.topSpeed}
+            decimals={0}
             min={50}
             max={550}
+            maxLength={4}
             onValueChange={v => onUpdateNumeric('topSpeed', v)}
-          />
-        </View>
-        <View style={styles.col}>
-          <Text style={styles.label}>{t('gears')}</Text>
-          <NumericInput
-            value={inputs.numGears}
-            min={1}
-            max={10}
-            decimals={0}
-            step={1}
-            onValueChange={v => onUpdateNumeric('numGears', v)}
           />
         </View>
       </View>
 
-      <Text style={[styles.label, { marginTop: 8 }]}>{t('powerBandCurve')}</Text>
+      <View style={styles.gearHeaderRow}>
+        <Text style={[styles.label, { marginBottom: 0 }]}>{t('gears')}</Text>
+        <Text style={styles.gearSelectedBadge}>
+          {inputs.numGears === 1 ? '1-Speed (Direct)' : `${inputs.numGears}-Speed`}
+        </Text>
+      </View>
+      <View style={styles.gearTrack}>
+        {GEAR_OPTIONS.map(g => {
+          const isActive = inputs.numGears === g;
+          return (
+            <TouchableOpacity
+              key={`gear-${g}`}
+              style={[styles.gearPill, isActive && styles.gearPillActive]}
+              accessibilityRole="button"
+              accessibilityLabel={`${g} gears`}
+              accessibilityState={{ selected: isActive }}
+              onPress={() => onUpdateNumeric('numGears', g)}
+            >
+              <Text
+                style={[styles.gearPillText, isActive && styles.gearPillTextActive]}
+                numberOfLines={1}
+              >
+                {g}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <Text style={[styles.label, { marginTop: 10 }]}>{t('powerBandCurve')}</Text>
       <View style={styles.pillGroupFull}>
         {([
           { key: 'balanced', label: t('balancedTurbo') },
@@ -92,9 +122,56 @@ export const EngineGearingCard: React.FC<EngineGearingCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8, marginBottom: 8, width: '100%' },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8, width: '100%' },
   col: { flex: 1, minWidth: 0 },
   label: { fontSize: 11, color: THEME.textSecondary, marginBottom: 4, fontWeight: '600' },
+  gearHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  gearSelectedBadge: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: THEME.accentAmber,
+  },
+  gearTrack: {
+    flexDirection: 'row',
+    backgroundColor: THEME.bgCanvas,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 14,
+    padding: 3,
+    gap: 3,
+    marginBottom: 4,
+  },
+  gearPill: {
+    flex: 1,
+    minWidth: 0,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: THEME.bgElevated,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  gearPillActive: {
+    backgroundColor: THEME.accentBrand,
+    borderColor: THEME.accentBrand,
+  },
+  gearPillText: {
+    color: THEME.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  gearPillTextActive: {
+    color: '#ffffff',
+    fontWeight: '900',
+  },
   pillGroupFull: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
   subPill: {
     paddingVertical: 7,

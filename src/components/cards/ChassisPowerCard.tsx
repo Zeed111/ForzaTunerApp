@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CarCategory, Discipline, Drivetrain, VehicleInputs } from '../../types/tuning';
 import { CollapsibleCard } from '../ui/CollapsibleCard';
@@ -27,6 +27,20 @@ export const ChassisPowerCard: React.FC<ChassisPowerCardProps> = ({
   onToggleCollapse,
 }) => {
   const isImp = inputs.units === 'imperial';
+  const [lastPsInput, setLastPsInput] = useState<{ hp: number; ps: number } | null>(null);
+
+  useEffect(() => {
+    if (lastPsInput && (powerUnit !== 'ps' || lastPsInput.hp !== inputs.hp)) {
+      setLastPsInput(null);
+    }
+  }, [lastPsInput, powerUnit, inputs.hp]);
+
+  const powerDisplayValue =
+    powerUnit === 'ps'
+      ? lastPsInput && lastPsInput.hp === inputs.hp
+        ? lastPsInput.ps
+        : hpToPs(inputs.hp)
+      : inputs.hp;
 
   return (
     <CollapsibleCard
@@ -82,48 +96,88 @@ export const ChassisPowerCard: React.FC<ChassisPowerCardProps> = ({
       <View style={styles.row}>
         <View style={styles.col}>
           <View style={styles.powerHeaderRow}>
-            <Text style={[styles.label, { marginBottom: 0 }]}>{t('power')}</Text>
+            <Text style={[styles.label, styles.labelInline]} numberOfLines={1}>
+              {t('power')}
+            </Text>
             <View style={styles.unitMiniSwitch}>
               <TouchableOpacity
                 style={[styles.unitMiniBtn, powerUnit === 'hp' && styles.unitMiniBtnActive]}
-                onPress={() => onChangePowerUnit('hp')}
+                onPress={() => {
+                  setLastPsInput(null);
+                  onChangePowerUnit('hp');
+                }}
               >
                 <Text style={[styles.unitMiniText, powerUnit === 'hp' && styles.unitMiniTextActive]}>{t('hpUnit')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.unitMiniBtn, powerUnit === 'ps' && styles.unitMiniBtnActive]}
-                onPress={() => onChangePowerUnit('ps')}
+                onPress={() => {
+                  setLastPsInput(null);
+                  onChangePowerUnit('ps');
+                }}
               >
                 <Text style={[styles.unitMiniText, powerUnit === 'ps' && styles.unitMiniTextActive]}>{t('psUnit')}</Text>
               </TouchableOpacity>
             </View>
           </View>
           <NumericInput
-            value={powerUnit === 'ps' ? Math.round(hpToPs(inputs.hp)) : inputs.hp}
+            fieldId="chassis-power"
+            fieldLabel="Chassis • Power"
+            fieldOrder={101}
+            value={powerDisplayValue}
+            decimals={0}
             min={30}
             max={3000}
-            onValueChange={v => onUpdateNumeric('hp', powerUnit === 'ps' ? psToHp(v) : v)}
+            maxLength={5}
+            onValueChange={v => {
+              if (powerUnit === 'ps') {
+                const nextHp = psToHp(v);
+                setLastPsInput({ hp: nextHp, ps: v });
+                onUpdateNumeric('hp', nextHp);
+              } else {
+                setLastPsInput(null);
+                onUpdateNumeric('hp', v);
+              }
+            }}
+            onBlur={() => setLastPsInput(null)}
           />
           <Text style={styles.approxHint}>
-            {powerUnit === 'ps' ? t('approxHp', { val: inputs.hp }) : t('approxPs', { val: Math.round(hpToPs(inputs.hp)) })}
+            {powerUnit === 'ps' ? t('approxHp', { val: inputs.hp }) : t('approxPs', { val: hpToPs(inputs.hp) })}
           </Text>
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>{t('weight', { unit: isImp ? 'lbs' : 'kg' })}</Text>
+          <View style={styles.colHeaderRow}>
+            <Text style={[styles.label, styles.labelInline]} numberOfLines={1}>
+              {t('weight', { unit: isImp ? 'lbs' : 'kg' })}
+            </Text>
+          </View>
           <NumericInput
+            fieldId="chassis-weight"
+            fieldLabel="Chassis • Weight"
+            fieldOrder={102}
             value={inputs.weight}
+            decimals={0}
             min={300}
             max={9000}
+            maxLength={5}
             onValueChange={v => onUpdateNumeric('weight', v)}
           />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>{t('frontWeightPct')}</Text>
+          <View style={styles.colHeaderRow}>
+            <Text style={[styles.label, styles.labelInline]} numberOfLines={1}>
+              {t('frontWeightPct')}
+            </Text>
+          </View>
           <NumericInput
+            fieldId="chassis-front-weight"
+            fieldLabel="Chassis • Front Wt %"
+            fieldOrder={103}
             value={inputs.frontWeightPct}
             decimals={1}
             min={30}
             max={75}
+            maxLength={5}
             onValueChange={v => onUpdateNumeric('frontWeightPct', v)}
           />
         </View>
@@ -150,12 +204,20 @@ const styles = StyleSheet.create({
   },
   subPillText: { color: THEME.textSecondary, fontSize: 11.5, fontWeight: '700' },
   subPillTextActive: { color: '#ffffff' },
-  row: { flexDirection: 'row', gap: 8, marginBottom: 8, width: '100%' },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8, width: '100%' },
   col: { flex: 1, minWidth: 0 },
+  labelInline: { marginBottom: 0, flexShrink: 1 },
+  colHeaderRow: {
+    minHeight: 22,
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
   powerHeaderRow: {
+    minHeight: 22,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 4,
     marginBottom: 4,
   },
   unitMiniSwitch: {
