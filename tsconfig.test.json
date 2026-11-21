@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "noEmit": false,
+    "outDir": ".test-dist",
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": [
+    "src/engine/**/*.ts",
+    "src/types/tuning.ts",
+    "src/utils/units.ts",
+    "src/theme/index.ts",
+    "src/i18n/index.ts"
+  ],
+  "exclude": ["node_modules", "dist", ".expo", ".test-dist"]
+}
