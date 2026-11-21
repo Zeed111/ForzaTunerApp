@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Stethoscope, ClipboardCheck, Bookmark, RotateCcw } from 'lucide-react-native';
+import { BookOpen, Stethoscope, ClipboardCheck, Bookmark, RotateCcw } from 'lucide-react-native';
 import { UnitSystem } from '../../types/tuning';
 import { THEME } from '../../theme';
 import { t } from '../../i18n';
@@ -10,6 +10,7 @@ interface HeaderCommandBarProps {
   units: UnitSystem;
   onToggleUnits: (system: UnitSystem) => void;
   onReset: () => void;
+  onOpenGuide: () => void;
   onOpenDoctor: () => void;
   onOpenChecklist: () => void;
   onOpenGarage: () => void;
@@ -20,6 +21,7 @@ export const HeaderCommandBar: React.FC<HeaderCommandBarProps> = ({
   units,
   onToggleUnits,
   onReset,
+  onOpenGuide,
   onOpenDoctor,
   onOpenChecklist,
   onOpenGarage,
@@ -48,6 +50,10 @@ export const HeaderCommandBar: React.FC<HeaderCommandBarProps> = ({
       </View>
 
       <View style={styles.actionRow}>
+        <TouchableOpacity style={styles.cmdBtn} onPress={onOpenGuide}>
+          <BookOpen size={13} color={THEME.accentSteel} strokeWidth={2.3} />
+          <Text style={styles.cmdBtnText}>{t('guide')}</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.cmdBtn} onPress={onOpenDoctor}>
           <Stethoscope size={13} color={THEME.accentAmber} strokeWidth={2.3} />
           <Text style={styles.cmdBtnText}>{t('doctor')}</Text>

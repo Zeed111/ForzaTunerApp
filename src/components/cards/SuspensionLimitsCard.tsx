@@ -13,6 +13,7 @@ interface SuspensionLimitsCardProps {
   onUpdateInputs: (updater: (prev: VehicleInputs) => VehicleInputs) => void;
   onUpdateNumeric: (key: keyof VehicleInputs, val: number) => void;
   onAutoScaleLimits: () => void;
+  onOpenBiasGuide?: () => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -22,6 +23,7 @@ export const SuspensionLimitsCard: React.FC<SuspensionLimitsCardProps> = ({
   onUpdateInputs,
   onUpdateNumeric,
   onAutoScaleLimits,
+  onOpenBiasGuide,
   collapsed,
   onToggleCollapse,
 }) => {
@@ -178,6 +180,7 @@ export const SuspensionLimitsCard: React.FC<SuspensionLimitsCardProps> = ({
       <HandlingBiasTrack
         value={currentBias}
         onChange={nextBias => onUpdateInputs(p => ({ ...p, handlingBias: nextBias }))}
+        onOpenGuide={onOpenBiasGuide}
       />
     </CollapsibleCard>
   );

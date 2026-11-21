@@ -29,6 +29,7 @@ import { TuneOutputCard } from './src/components/cards/TuneOutputCard';
 import { TuneDoctorModal } from './src/components/modals/TuneDoctorModal';
 import { CompanionChecklistModal } from './src/components/modals/CompanionChecklistModal';
 import { GaragePresetsModal } from './src/components/modals/GaragePresetsModal';
+import { TuningGuideModal, GuideSectionTab } from './src/components/modals/TuningGuideModal';
 import { THEME } from './src/theme';
 import { t } from './src/i18n';
 
@@ -103,8 +104,15 @@ function AppContent() {
   const [doctorModalVisible, setDoctorModalVisible] = useState(false);
   const [checklistModalVisible, setChecklistModalVisible] = useState(false);
   const [presetModalVisible, setPresetModalVisible] = useState(false);
+  const [guideModalVisible, setGuideModalVisible] = useState(false);
+  const [guideInitialTab, setGuideInitialTab] = useState<GuideSectionTab>('all');
   const [copiedShareCard, setCopiedShareCard] = useState(false);
   const [copiedPresetId, setCopiedPresetId] = useState<string | null>(null);
+
+  const openGuideModal = (tab: GuideSectionTab = 'all') => {
+    setGuideInitialTab(tab);
+    setGuideModalVisible(true);
+  };
 
   const {
     inputs,
@@ -217,6 +225,7 @@ function AppContent() {
                 units={inputs.units}
                 onToggleUnits={toggleUnits}
                 onReset={handleReset}
+                onOpenGuide={() => openGuideModal('all')}
                 onOpenDoctor={() => setDoctorModalVisible(true)}
                 onOpenChecklist={() => setChecklistModalVisible(true)}
                 onOpenGarage={() => setPresetModalVisible(true)}
@@ -265,6 +274,7 @@ function AppContent() {
                           onChangePowerUnit={setPowerUnit}
                           onUpdateInputs={setInputs}
                           onUpdateNumeric={updateNumeric}
+                          onOpenCategoryGuide={() => openGuideModal('category')}
                           collapsed={!!collapsedSections.chassis}
                           onToggleCollapse={() => toggleSection('chassis')}
                         />
@@ -285,6 +295,7 @@ function AppContent() {
                           onUpdateInputs={setInputs}
                           onUpdateNumeric={updateNumeric}
                           onAutoScaleLimits={handleAutoScaleLimits}
+                          onOpenBiasGuide={() => openGuideModal('bias')}
                           collapsed={!!collapsedSections.limits}
                           onToggleCollapse={() => toggleSection('limits')}
                         />
@@ -377,6 +388,15 @@ function AppContent() {
         onDeletePreset={handleDeletePreset}
         copiedPresetId={copiedPresetId}
         onCopyPresetCard={handleCopyShareCard}
+      />
+
+      <TuningGuideModal
+        visible={guideModalVisible}
+        initialTab={guideInitialTab}
+        onClose={() => setGuideModalVisible(false)}
+        inputs={inputs}
+        onSelectCategory={cat => setInputs(prev => ({ ...prev, category: cat }))}
+        onSelectBias={bias => setInputs(prev => ({ ...prev, handlingBias: bias }))}
       />
     </SafeAreaView>
   );

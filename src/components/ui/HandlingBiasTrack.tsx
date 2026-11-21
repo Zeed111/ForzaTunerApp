@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { BookOpen } from 'lucide-react-native';
 import { THEME } from '../../theme';
 import { t } from '../../i18n';
 
@@ -8,13 +9,26 @@ const BIAS_STOPS = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
 interface HandlingBiasTrackProps {
   value: number;
   onChange: (nextBias: number) => void;
+  onOpenGuide?: () => void;
 }
 
-export const HandlingBiasTrack: React.FC<HandlingBiasTrackProps> = ({ value, onChange }) => {
+export const HandlingBiasTrack: React.FC<HandlingBiasTrackProps> = ({
+  value,
+  onChange,
+  onOpenGuide,
+}) => {
   return (
     <View style={styles.biasCard}>
       <View style={styles.headerRow}>
-        <Text style={styles.biasTitle}>{t('handlingBiasTitle')}</Text>
+        <View style={styles.titleWithGuide}>
+          <Text style={styles.biasTitle}>{t('handlingBiasTitle')}</Text>
+          {onOpenGuide && (
+            <TouchableOpacity style={styles.inlineGuideBtn} onPress={onOpenGuide}>
+              <BookOpen size={10} color={THEME.accentSteel} strokeWidth={2.4} />
+              <Text style={styles.inlineGuideText}>{t('guide')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <Text
           style={[
             styles.biasValueText,
@@ -104,7 +118,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
     marginBottom: 4,
+  },
+  titleWithGuide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  inlineGuideBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: THEME.bgElevated,
+    borderWidth: 1,
+    borderColor: THEME.borderStrong,
+  },
+  inlineGuideText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: THEME.accentSteel,
   },
   biasTitle: {
     fontSize: 11,

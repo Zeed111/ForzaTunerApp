@@ -9,10 +9,30 @@ export const translations = {
     subtitle: 'Mobile Telemetry & Precision Suspension Calculator',
     metric: 'Metric',
     imperial: 'Imperial',
+    guide: 'Guide',
     doctor: 'Doctor',
     checklist: 'Checklist',
     garage: 'Garage',
     reset: 'Reset',
+
+    // Tuning Guide Modal
+    tuningGuideTitle: 'Tuning Guidelines',
+    tuningGuideSubtitle: 'How Car Categories & Handling Bias Shape Your Setup',
+    guideTabAll: 'All Guides',
+    guideTabCategory: 'Car Category',
+    guideTabBias: 'Handling Bias',
+    guideActiveSetupLabel: 'YOUR CURRENT SELECTION',
+    guideWhatItDoes: 'What It Does:',
+    guideBestFor: 'Best For:',
+    guideEngineEffect: 'Calculator Adjustments:',
+    guideCategorySectionTitle: '1. Car Category Guidelines',
+    guideCategoryIntro:
+      'Two cars with identical weight and horsepower can have completely different suspension geometry, center of gravity, and aerodynamic efficiency. Your selected Car Category sets the baseline chassis archetype for Grip/Road alignment, aero target %, damping stiffness, ride height rake, and brake pressure.',
+    guideBiasSectionTitle: '2. Handling Balance Bias (-5 to +5)',
+    guideBiasIntro:
+      'Handling Balance Bias lets you tailor the car’s cornering rotation to your driving style without breaking your base spring rates or gear ratios. Moving the slider shifts lateral roll stiffness (Anti-Roll Bars), front/rear alignment, and rebound damping between planted stability and sharp turn-in agility.',
+    guideBiasMechanicsTitle: 'Exact Physics Per Step (1 Step Change):',
+    guideBiasRangeTitle: 'When to Use Each Bias Range:',
 
     // Tune Doctor
     tuneDoctor: 'Tune Doctor',

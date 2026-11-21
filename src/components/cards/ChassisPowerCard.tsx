@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { BookOpen } from 'lucide-react-native';
 import { CarCategory, Discipline, Drivetrain, VehicleInputs } from '../../types/tuning';
 import { CollapsibleCard } from '../ui/CollapsibleCard';
 import { NumericInput } from '../ui/NumericInput';
@@ -13,6 +14,7 @@ interface ChassisPowerCardProps {
   onChangePowerUnit: (unit: 'hp' | 'ps') => void;
   onUpdateInputs: (updater: (prev: VehicleInputs) => VehicleInputs) => void;
   onUpdateNumeric: (key: keyof VehicleInputs, val: number) => void;
+  onOpenCategoryGuide?: () => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -23,6 +25,7 @@ export const ChassisPowerCard: React.FC<ChassisPowerCardProps> = ({
   onChangePowerUnit,
   onUpdateInputs,
   onUpdateNumeric,
+  onOpenCategoryGuide,
   collapsed,
   onToggleCollapse,
 }) => {
@@ -49,7 +52,15 @@ export const ChassisPowerCard: React.FC<ChassisPowerCardProps> = ({
       onToggle={onToggleCollapse}
       collapsedSummary={`${inputs.category.toUpperCase()} • ${inputs.discipline.toUpperCase()} • ${inputs.drivetrain} • ${Math.round(inputs.hp)} HP`}
     >
-      <Text style={styles.label}>{t('carCategory')}</Text>
+      <View style={styles.labelRowWithGuide}>
+        <Text style={[styles.label, styles.labelInline]}>{t('carCategory')}</Text>
+        {onOpenCategoryGuide && (
+          <TouchableOpacity style={styles.inlineGuideBtn} onPress={onOpenCategoryGuide}>
+            <BookOpen size={10} color={THEME.accentSteel} strokeWidth={2.4} />
+            <Text style={styles.inlineGuideText}>{t('guide')}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       <View style={styles.pillGroupFull}>
         {([
           { key: 'jdm', label: t('jdmLabel') },
@@ -190,6 +201,28 @@ export const ChassisPowerCard: React.FC<ChassisPowerCardProps> = ({
 
 const styles = StyleSheet.create({
   label: { fontSize: 11, color: THEME.textSecondary, marginBottom: 4, fontWeight: '600' },
+  labelRowWithGuide: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  inlineGuideBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: THEME.bgElevated,
+    borderWidth: 1,
+    borderColor: THEME.borderStrong,
+  },
+  inlineGuideText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: THEME.accentSteel,
+  },
   pillGroupFull: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
   subPill: {
     paddingVertical: 7,
