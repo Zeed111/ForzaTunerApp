@@ -1,15 +1,7 @@
 export const translations = {
   en: {
-    // Car Selector Modal
-    selectVehicle: 'Select Vehicle ({{count}})',
-    noVehiclesMatching: 'No vehicles matching "{{search}}"',
-    noVehiclesMatchFilters: 'No vehicles match the selected filters',
-    filterAll: 'ALL',
-    resetFilters: 'Reset Filters',
+    // Shared Actions & Confirmations
     cancel: 'Cancel',
-    searchPlaceholder: 'Search manufacturer, model, or year...',
-    carSpecsMeta: '{{drivetrain}} • {{hp}} HP • {{weight}} {{wtUnit}} • {{frontPct}}% F • {{category}}',
-    clearSymbol: '✕',
 
     // Top Bar & Header
     forza: 'FORZA ',
@@ -17,7 +9,6 @@ export const translations = {
     subtitle: 'Mobile Telemetry & Precision Suspension Calculator',
     metric: 'Metric',
     imperial: 'Imperial',
-    cars: 'Cars',
     doctor: 'Doctor',
     checklist: 'Checklist',
     garage: 'Garage',
@@ -77,9 +68,11 @@ export const translations = {
     chassisAndPower: '1. Chassis & Power',
     carCategory: 'Car Category',
     jdmLabel: 'JDM / Tuner',
+    sportsLabel: 'Sports / GT',
     trackLabel: 'GT / Track',
     classicLabel: 'Classic / Muscle',
     supercarLabel: 'Supercar',
+    offroadLabel: 'Offroad / Rally',
     disciplineSurface: 'Discipline / Surface',
     drivetrain: 'Drivetrain',
     power: 'Power',
@@ -144,14 +137,17 @@ export const translations = {
     // Active Vehicle Banner & Section Headers
     activeVehicle: 'ACTIVE VEHICLE',
     customBuild: 'Custom Spec Build',
-    changeCar: 'Change Car',
+    garageSave: 'Garage / Save',
     saveTune: 'Save Tune',
+    garageTunes: 'Saved Tunes',
+    brakeBalanceSub: '↳ {{phys}}% Front Physics • FH Inverted Slider',
     powerToWeight: '{{ptw}} HP/t',
     matchFrontTires: 'Match Front',
     staggerPlus30: '+30mm Stagger',
     viewTune: 'View Tune',
     targetHotTelemetry: '↳ Target Hot (Telemetry):',
     handlingBalanceSub: '↳ Handling Balance:',
+    brakeBiasNoteSub: '↳ Brake Bias Note:',
     secTiresAlignment: 'Tires & Alignment',
     secSuspensionDamping: 'Suspension & Damping',
     secAeroBrakesDiff: 'Aero, Brakes & Diff',

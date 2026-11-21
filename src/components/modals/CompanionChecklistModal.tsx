@@ -216,6 +216,7 @@ export const CompanionChecklistModal: React.FC<CompanionChecklistModalProps> = (
       category: catBrakes,
       label: 'Braking Balance',
       value: tune.brakeBalance,
+      subValue: tune.brakeBalanceNote,
     },
     {
       id: 'brake_pres',

@@ -196,6 +196,9 @@ export const TuneOutputCard: React.FC<TuneOutputCardProps> = ({
             rearRatio={tune.raw.brakePressureRatio}
             frontTag="BAL"
             rearTag="PRS"
+            subLabel={tune.brakeBalanceNote ? t('brakeBiasNoteSub') : undefined}
+            subValue={tune.brakeBalanceNote}
+            subColor={THEME.accentSteel}
           />
           {tune.diffFront && (
             <TuneGaugeRow

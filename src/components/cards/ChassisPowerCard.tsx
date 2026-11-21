@@ -53,9 +53,11 @@ export const ChassisPowerCard: React.FC<ChassisPowerCardProps> = ({
       <View style={styles.pillGroupFull}>
         {([
           { key: 'jdm', label: t('jdmLabel') },
+          { key: 'sports', label: t('sportsLabel') },
           { key: 'track', label: t('trackLabel') },
           { key: 'classic', label: t('classicLabel') },
           { key: 'supercar', label: t('supercarLabel') },
+          { key: 'offroad', label: t('offroadLabel') },
         ] as { key: CarCategory; label: string }[]).map(c => (
           <TouchableOpacity
             key={c.key}
