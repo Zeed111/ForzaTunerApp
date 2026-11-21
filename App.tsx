@@ -5,17 +5,21 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { MobileTab, OutputTab, TuneResult, VehicleInputs } from './src/types/tuning';
 import { formatShareableTuneCard, copyOrShareText } from './src/utils/shareTuneCard';
 import { useTunerState } from './src/hooks/useTunerState';
 import { useGaragePresets } from './src/hooks/useGaragePresets';
+import { useKeyboardInset } from './src/hooks/useKeyboardInset';
+import { FormNavigationProvider, useFormNavigation } from './src/context/FormNavigationContext';
 import { HeaderCommandBar } from './src/components/layout/HeaderCommandBar';
 import { ActiveVehicleHero } from './src/components/layout/ActiveVehicleHero';
 import { StickyMobileBar } from './src/components/layout/StickyMobileBar';
+import { KeyboardAccessoryBar } from './src/components/layout/KeyboardAccessoryBar';
 import { ChassisPowerCard } from './src/components/cards/ChassisPowerCard';
 import { TiresKinematicsCard } from './src/components/cards/TiresKinematicsCard';
 import { SuspensionLimitsCard } from './src/components/cards/SuspensionLimitsCard';
@@ -29,11 +33,68 @@ import { GaragePresetsModal } from './src/components/modals/GaragePresetsModal';
 import { THEME } from './src/theme';
 import { t } from './src/i18n';
 
-export default function App() {
+interface MobileKeyboardChromeProps {
+  isWideScreen: boolean;
+  isKeyboardVisible: boolean;
+  tune: TuneResult;
+  onViewTune: () => void;
+  onOpenChecklist: () => void;
+}
+
+const MobileKeyboardChrome: React.FC<MobileKeyboardChromeProps> = ({
+  isWideScreen,
+  isKeyboardVisible,
+  tune,
+  onViewTune,
+  onOpenChecklist,
+}) => {
+  const formNav = useFormNavigation();
+
+  if (isWideScreen) {
+    return null;
+  }
+
+  if (isKeyboardVisible) {
+    if (formNav?.activeFieldId) {
+      const activeId = formNav.activeFieldId;
+      return (
+        <KeyboardAccessoryBar
+          label={formNav.activeFieldLabel}
+          canGoPrev={formNav.canGoPrev}
+          canGoNext={formNav.canGoNext}
+          onPrev={() => formNav.focusPrev(activeId)}
+          onNext={() => formNav.focusNext(activeId)}
+          onDone={formNav.dismissKeyboard}
+        />
+      );
+    }
+    return null;
+  }
+
+  return (
+    <StickyMobileBar
+      tune={tune}
+      onViewTune={onViewTune}
+      onOpenChecklist={onOpenChecklist}
+    />
+  );
+};
+
+function AppContent() {
   const { width: windowWidth } = useWindowDimensions();
   const isWideScreen = windowWidth >= 920;
+  const isNarrowMobile = windowWidth < 520;
 
   const scrollRef = useRef<ScrollView>(null);
+  const keyboardFrameRef = useRef<View>(null);
+  const scrollViewportRef = useRef<View>(null);
+  const scrollOffsetRef = useRef<number>(0);
+
+  const { keyboardInset, isKeyboardVisible } = useKeyboardInset({
+    containerRef: keyboardFrameRef,
+    subtractSafeAreaBottomOnIOS: true,
+  });
+
   const [mobileTab, setMobileTab] = useState<MobileTab>('specs');
   const [outputTab, setOutputTab] = useState<OutputTab>('all');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -105,184 +166,158 @@ export default function App() {
   const showTuneCard = isWideScreen || mobileTab === 'tune' || mobileTab === 'all';
 
   return (
-    <SafeAreaProvider style={styles.provider}>
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="light-content" backgroundColor={THEME.bgCanvas} translucent={false} />
-        <ScrollView
-          ref={scrollRef}
-          style={styles.scrollView}
-          contentContainerStyle={[
-            styles.container,
-            isWideScreen ? styles.containerWide : styles.containerMobile,
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
+      <StatusBar style="light" />
+      <View
+        ref={keyboardFrameRef}
+        collapsable={false}
+        style={[styles.keyboardFrame, { paddingBottom: keyboardInset }]}
+      >
+        <FormNavigationProvider
+          scrollRef={scrollRef}
+          scrollViewportRef={scrollViewportRef}
+          scrollOffsetRef={scrollOffsetRef}
+          keyboardInset={keyboardInset}
+          isKeyboardVisible={isKeyboardVisible}
         >
-          <HeaderCommandBar
-            isWideScreen={isWideScreen}
-            units={inputs.units}
-            onToggleUnits={toggleUnits}
-            onReset={handleReset}
-            onOpenCars={() => setCarModalVisible(true)}
-            onOpenDoctor={() => setDoctorModalVisible(true)}
-            onOpenChecklist={() => setChecklistModalVisible(true)}
-            onOpenGarage={() => setPresetModalVisible(true)}
-          />
+          <View ref={scrollViewportRef} collapsable={false} style={styles.scrollViewport}>
+            <ScrollView
+              ref={scrollRef}
+              style={styles.scrollView}
+              contentContainerStyle={[
+                styles.container,
+                isWideScreen
+                  ? styles.containerWide
+                  : [
+                      styles.containerMobile,
+                      isNarrowMobile && styles.containerNarrowMobile,
+                      isKeyboardVisible && styles.containerMobileKeyboardOpen,
+                    ],
+              ]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              scrollEventThrottle={16}
+              onScroll={e => {
+                scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
+              }}
+            >
+              <HeaderCommandBar
+                isWideScreen={isWideScreen}
+                units={inputs.units}
+                onToggleUnits={toggleUnits}
+                onReset={handleReset}
+                onOpenCars={() => setCarModalVisible(true)}
+                onOpenDoctor={() => setDoctorModalVisible(true)}
+                onOpenChecklist={() => setChecklistModalVisible(true)}
+                onOpenGarage={() => setPresetModalVisible(true)}
+              />
 
-          <ActiveVehicleHero
-            inputs={inputs}
-            ptwVal={ptwVal}
-            onChangeCar={() => setCarModalVisible(true)}
-            onSaveTune={() => setPresetModalVisible(true)}
-          />
+              <ActiveVehicleHero
+                inputs={inputs}
+                ptwVal={ptwVal}
+                onChangeCar={() => setCarModalVisible(true)}
+                onSaveTune={() => setPresetModalVisible(true)}
+              />
 
-          {!isWideScreen && (
-            <View style={styles.mobileTabBar}>
-              {([
-                { key: 'specs', label: t('tabSpecs') },
-                { key: 'limits', label: t('tabLimits') },
-                { key: 'tune', label: t('tabTune') },
-                { key: 'all', label: t('tabAll') },
-              ] as { key: MobileTab; label: string }[]).map(tab => {
-                const isActive = mobileTab === tab.key;
-                return (
-                  <TouchableOpacity
-                    key={tab.key}
-                    style={[styles.mobileTabPill, isActive && styles.mobileTabPillActive]}
-                    onPress={() => setMobileTab(tab.key)}
-                  >
-                    <Text style={[styles.mobileTabText, isActive && styles.mobileTabTextActive]}>
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
+              {!isWideScreen && (
+                <View style={styles.mobileTabBar}>
+                  {([
+                    { key: 'specs', label: t('tabSpecs') },
+                    { key: 'limits', label: t('tabLimits') },
+                    { key: 'tune', label: t('tabTune') },
+                    { key: 'all', label: t('tabAll') },
+                  ] as { key: MobileTab; label: string }[]).map(tab => {
+                    const isActive = mobileTab === tab.key;
+                    return (
+                      <TouchableOpacity
+                        key={tab.key}
+                        style={[styles.mobileTabPill, isActive && styles.mobileTabPillActive]}
+                        onPress={() => setMobileTab(tab.key)}
+                      >
+                        <Text style={[styles.mobileTabText, isActive && styles.mobileTabTextActive]}>
+                          {tab.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
 
-          <View style={isWideScreen ? styles.mainGridWide : styles.mainGridNarrow}>
-            {(showSpecsCards || showLimitsCards) && (
-              <View style={isWideScreen ? styles.leftColumnWide : styles.columnFull}>
-                {showSpecsCards && (
-                  <>
-                    <ChassisPowerCard
-                      inputs={inputs}
-                      powerUnit={powerUnit}
-                      onChangePowerUnit={setPowerUnit}
-                      onUpdateInputs={setInputs}
-                      onUpdateNumeric={updateNumeric}
-                      collapsed={!!collapsedSections.chassis}
-                      onToggleCollapse={() => toggleSection('chassis')}
-                    />
-                    <TiresKinematicsCard
-                      inputs={inputs}
-                      onUpdateInputs={setInputs}
-                      onUpdateNumeric={updateNumeric}
-                      collapsed={!!collapsedSections.tires}
-                      onToggleCollapse={() => toggleSection('tires')}
-                    />
-                  </>
+              <View style={isWideScreen ? styles.mainGridWide : styles.mainGridNarrow}>
+                {(showSpecsCards || showLimitsCards) && (
+                  <View style={isWideScreen ? styles.leftColumnWide : styles.columnFull}>
+                    {showSpecsCards && (
+                      <>
+                        <ChassisPowerCard
+                          inputs={inputs}
+                          powerUnit={powerUnit}
+                          onChangePowerUnit={setPowerUnit}
+                          onUpdateInputs={setInputs}
+                          onUpdateNumeric={updateNumeric}
+                          collapsed={!!collapsedSections.chassis}
+                          onToggleCollapse={() => toggleSection('chassis')}
+                        />
+                        <TiresKinematicsCard
+                          inputs={inputs}
+                          onUpdateInputs={setInputs}
+                          onUpdateNumeric={updateNumeric}
+                          collapsed={!!collapsedSections.tires}
+                          onToggleCollapse={() => toggleSection('tires')}
+                        />
+                      </>
+                    )}
+
+                    {showLimitsCards && (
+                      <>
+                        <SuspensionLimitsCard
+                          inputs={inputs}
+                          onUpdateInputs={setInputs}
+                          onUpdateNumeric={updateNumeric}
+                          onAutoScaleLimits={handleAutoScaleLimits}
+                          collapsed={!!collapsedSections.limits}
+                          onToggleCollapse={() => toggleSection('limits')}
+                        />
+                        <AeroLimitsCard
+                          inputs={inputs}
+                          onUpdateNumeric={updateNumeric}
+                          collapsed={!!collapsedSections.aero}
+                          onToggleCollapse={() => toggleSection('aero')}
+                        />
+                        <EngineGearingCard
+                          inputs={inputs}
+                          onUpdateInputs={setInputs}
+                          onUpdateNumeric={updateNumeric}
+                          collapsed={!!collapsedSections.engine}
+                          onToggleCollapse={() => toggleSection('engine')}
+                        />
+                      </>
+                    )}
+                  </View>
                 )}
 
-                {showLimitsCards && (
-                  <>
-                    <SuspensionLimitsCard
+                {showTuneCard && (
+                  <View style={isWideScreen ? styles.rightColumnWide : styles.columnFull}>
+                    <TuneOutputCard
                       inputs={inputs}
-                      onUpdateInputs={setInputs}
-                      onUpdateNumeric={updateNumeric}
-                      onAutoScaleLimits={handleAutoScaleLimits}
-                      collapsed={!!collapsedSections.limits}
-                      onToggleCollapse={() => toggleSection('limits')}
+                      tune={tune}
+                      outputTab={outputTab}
+                      onChangeOutputTab={setOutputTab}
+                      selectedGear={selectedGear}
+                      onSelectGear={setSelectedGear}
+                      copiedShareCard={copiedShareCard}
+                      onCopyShareCard={() => handleCopyShareCard()}
+                      onOpenChecklist={() => setChecklistModalVisible(true)}
                     />
-                    <AeroLimitsCard
-                      inputs={inputs}
-                      onUpdateNumeric={updateNumeric}
-                      collapsed={!!collapsedSections.aero}
-                      onToggleCollapse={() => toggleSection('aero')}
-                    />
-                    <EngineGearingCard
-                      inputs={inputs}
-                      onUpdateInputs={setInputs}
-                      onUpdateNumeric={updateNumeric}
-                      collapsed={!!collapsedSections.engine}
-                      onToggleCollapse={() => toggleSection('engine')}
-                    />
-                  </>
+                  </View>
                 )}
               </View>
-            )}
-
-            {showTuneCard && (
-              <View style={isWideScreen ? styles.rightColumnWide : styles.columnFull}>
-                <TuneOutputCard
-                  inputs={inputs}
-                  tune={tune}
-                  outputTab={outputTab}
-                  onChangeOutputTab={setOutputTab}
-                  selectedGear={selectedGear}
-                  onSelectGear={setSelectedGear}
-                  copiedShareCard={copiedShareCard}
-                  onCopyShareCard={() => handleCopyShareCard()}
-                  onOpenChecklist={() => setChecklistModalVisible(true)}
-                />
-              </View>
-            )}
+            </ScrollView>
           </View>
 
-          <CarSelectorModal
-            visible={carModalVisible}
-            onClose={() => setCarModalVisible(false)}
-            onSelectCar={(specs: Partial<VehicleInputs>) => {
-              setInputs(prev => ({ ...prev, ...specs }));
-              setChecklistCheckedIds(new Set());
-            }}
-            units={inputs.units}
-          />
-
-          <TuneDoctorModal
-            visible={doctorModalVisible}
-            onClose={() => setDoctorModalVisible(false)}
-            inputs={inputs}
-            onApplyFix={(newInputs: VehicleInputs) => setInputs(newInputs)}
-          />
-
-          <CompanionChecklistModal
-            visible={checklistModalVisible}
-            onClose={() => setChecklistModalVisible(false)}
-            tune={tune}
-            inputs={inputs}
-            checkedIds={checklistCheckedIds}
-            onToggleCheck={id => {
-              setChecklistCheckedIds(prev => {
-                const next = new Set(prev);
-                if (next.has(id)) {
-                  next.delete(id);
-                } else {
-                  next.add(id);
-                }
-                return next;
-              });
-            }}
-            onCheckAll={allIds => setChecklistCheckedIds(new Set(allIds))}
-            onResetChecks={() => setChecklistCheckedIds(new Set())}
-          />
-
-          <GaragePresetsModal
-            visible={presetModalVisible}
-            onClose={() => setPresetModalVisible(false)}
-            presetNameInput={presetNameInput}
-            onChangePresetName={setPresetNameInput}
-            savedPresets={savedPresets}
-            onSavePreset={handleSavePreset}
-            onLoadPreset={handleLoadPreset}
-            onDeletePreset={handleDeletePreset}
-            copiedPresetId={copiedPresetId}
-            onCopyPresetCard={handleCopyShareCard}
-          />
-        </ScrollView>
-
-        {!isWideScreen && (
-          <StickyMobileBar
+          <MobileKeyboardChrome
+            isWideScreen={isWideScreen}
+            isKeyboardVisible={isKeyboardVisible}
             tune={tune}
             onViewTune={() => {
               setMobileTab('tune');
@@ -290,8 +325,67 @@ export default function App() {
             }}
             onOpenChecklist={() => setChecklistModalVisible(true)}
           />
-        )}
-      </SafeAreaView>
+        </FormNavigationProvider>
+      </View>
+
+      <CarSelectorModal
+        visible={carModalVisible}
+        onClose={() => setCarModalVisible(false)}
+        onSelectCar={(specs: Partial<VehicleInputs>) => {
+          setInputs(prev => ({ ...prev, ...specs }));
+          setChecklistCheckedIds(new Set());
+        }}
+        units={inputs.units}
+      />
+
+      <TuneDoctorModal
+        visible={doctorModalVisible}
+        onClose={() => setDoctorModalVisible(false)}
+        inputs={inputs}
+        onApplyFix={(newInputs: VehicleInputs) => setInputs(newInputs)}
+      />
+
+      <CompanionChecklistModal
+        visible={checklistModalVisible}
+        onClose={() => setChecklistModalVisible(false)}
+        tune={tune}
+        inputs={inputs}
+        checkedIds={checklistCheckedIds}
+        onToggleCheck={id => {
+          setChecklistCheckedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+              next.delete(id);
+            } else {
+              next.add(id);
+            }
+            return next;
+          });
+        }}
+        onCheckAll={allIds => setChecklistCheckedIds(new Set(allIds))}
+        onResetChecks={() => setChecklistCheckedIds(new Set())}
+      />
+
+      <GaragePresetsModal
+        visible={presetModalVisible}
+        onClose={() => setPresetModalVisible(false)}
+        presetNameInput={presetNameInput}
+        onChangePresetName={setPresetNameInput}
+        savedPresets={savedPresets}
+        onSavePreset={handleSavePreset}
+        onLoadPreset={handleLoadPreset}
+        onDeletePreset={handleDeletePreset}
+        copiedPresetId={copiedPresetId}
+        onCopyPresetCard={handleCopyShareCard}
+      />
+    </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider style={styles.provider}>
+      <AppContent />
     </SafeAreaProvider>
   );
 }
@@ -305,6 +399,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.bgCanvas,
   },
+  keyboardFrame: {
+    flex: 1,
+  },
+  scrollViewport: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
     width: '100%',
@@ -317,6 +417,13 @@ const styles = StyleSheet.create({
   containerMobile: {
     maxWidth: 640,
     paddingBottom: 24,
+  },
+  containerNarrowMobile: {
+    padding: 12,
+    paddingBottom: 24,
+  },
+  containerMobileKeyboardOpen: {
+    paddingBottom: 56,
   },
   containerWide: {
     maxWidth: 1220,
