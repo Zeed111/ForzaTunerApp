@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Modal,
   View,
@@ -9,15 +9,21 @@ import {
   FlatList,
   ScrollView,
   StyleSheet,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
+  TextStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X, RotateCcw } from 'lucide-react-native';
 import { FORZA_CAR_DATABASE, PredefinedCar } from '../../data/cars';
 import { CarCategory, Drivetrain, UnitSystem, VehicleInputs } from '../../types/tuning';
 import { convertPredefinedSpecsToUnits, KG_TO_LBS } from '../../utils/units';
+import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 import { t } from '../../i18n';
 import { THEME, getPiColor } from '../../theme';
+
+const WEB_INPUT_RESET: TextStyle | undefined =
+  Platform.OS === 'web' ? ({ outlineStyle: 'none' } as unknown as TextStyle) : undefined;
 
 export interface CarSelectorModalProps {
   visible: boolean;
@@ -41,6 +47,14 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
   onSelectCar,
   units,
 }) => {
+  const overlayRef = useRef<View>(null);
+  const insets = useSafeAreaInsets();
+  const { keyboardInset, isKeyboardVisible } = useKeyboardInset({
+    containerRef: overlayRef,
+    subtractSafeAreaBottomOnIOS: false,
+    enabled: visible,
+  });
+
   const [search, setSearch] = useState('');
   const [selectedPi, setSelectedPi] = useState<string>('ALL');
   const [selectedDt, setSelectedDt] = useState<'ALL' | Drivetrain>('ALL');
@@ -93,10 +107,27 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.modalOverlay}
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={onClose}
+    >
+      <View
+        ref={overlayRef}
+        collapsable={false}
+        style={[
+          styles.modalOverlay,
+          {
+            paddingTop: Math.max(16, insets.top + 8),
+            paddingBottom: isKeyboardVisible
+              ? keyboardInset + 12
+              : Math.max(16, insets.bottom + 12),
+            justifyContent: isKeyboardVisible ? 'flex-start' : 'center',
+          },
+        ]}
       >
         <Pressable
           style={StyleSheet.absoluteFill}
@@ -116,17 +147,30 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
           </View>
 
           <View style={styles.searchRow}>
-            <Search size={14} color={THEME.textMuted} style={styles.searchIcon} />
+            <View style={styles.searchIcon} pointerEvents="none">
+              <Search size={14} color={THEME.textMuted} />
+            </View>
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, WEB_INPUT_RESET]}
               placeholder={t('searchPlaceholder')}
               placeholderTextColor={THEME.textMuted}
+              cursorColor={THEME.accentBrand}
+              selectionColor={THEME.accentBrand}
               value={search}
               onChangeText={setSearch}
               autoCorrect={false}
+              autoCapitalize="none"
+              spellCheck={false}
+              returnKeyType="search"
+              enterKeyHint="search"
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
             {search.length > 0 && (
-              <TouchableOpacity style={styles.clearSearchBtn} onPress={() => setSearch('')}>
+              <TouchableOpacity
+                style={styles.clearSearchBtn}
+                onPress={() => setSearch('')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <X size={14} color={THEME.textSecondary} strokeWidth={2.5} />
               </TouchableOpacity>
             )}
@@ -223,11 +267,12 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
           <FlatList
             data={filteredCars}
             keyExtractor={(item, index) => item.id || `car-${index}`}
-            style={{ maxHeight: 360 }}
+            style={[styles.carList, !isKeyboardVisible && styles.carListDefaultMax]}
             initialNumToRender={15}
             maxToRenderPerBatch={20}
             windowSize={5}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>
@@ -272,14 +317,14 @@ export const CarSelectorModal: React.FC<CarSelectorModalProps> = ({
             <Text style={styles.closeBtnText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(10, 12, 16, 0.84)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  modalContent: { width: '100%', maxWidth: 520, backgroundColor: THEME.bgCard, borderWidth: 1, borderColor: THEME.borderStrong, borderRadius: 28, padding: 18, paddingTop: 12 },
+  modalContent: { width: '100%', maxWidth: 520, maxHeight: '100%', flexShrink: 1, backgroundColor: THEME.bgCard, borderWidth: 1, borderColor: THEME.borderStrong, borderRadius: 28, padding: 18, paddingTop: 12 },
   sheetHandle: { width: 36, height: 4, borderRadius: 999, backgroundColor: THEME.borderStrong, alignSelf: 'center', marginBottom: 12 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   modalTitle: { fontSize: 17, fontWeight: '900', color: THEME.textPrimary, letterSpacing: 0.3 },
@@ -300,6 +345,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     minWidth: 0,
+    minHeight: 42,
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.border,
@@ -308,7 +354,15 @@ const styles = StyleSheet.create({
     paddingLeft: 38,
     paddingRight: 40,
     paddingVertical: 10,
-    fontSize: 13.5,
+    fontSize: Platform.select({ web: 16, default: 14 }),
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
+  carList: {
+    flexShrink: 1,
+  },
+  carListDefaultMax: {
+    maxHeight: 360,
   },
   clearSearchBtn: { position: 'absolute', right: 12, padding: 4 },
   filterScroll: { flexGrow: 0, marginBottom: 6 },

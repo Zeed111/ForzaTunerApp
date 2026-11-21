@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Modal,
   View,
@@ -7,15 +7,20 @@ import {
   TouchableOpacity,
   Pressable,
   FlatList,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  TextStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, Copy, Trash2 } from 'lucide-react-native';
 import { DEFAULT_INPUTS, PresetItem, TuneResult, VehicleInputs } from '../../types/tuning';
 import { calculateTune } from '../../engine';
+import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 import { THEME, getPiColor } from '../../theme';
 import { t } from '../../i18n';
+
+const WEB_INPUT_RESET: TextStyle | undefined =
+  Platform.OS === 'web' ? ({ outlineStyle: 'none' } as unknown as TextStyle) : undefined;
 
 interface GaragePresetsModalProps {
   visible: boolean;
@@ -42,11 +47,36 @@ export const GaragePresetsModal: React.FC<GaragePresetsModalProps> = ({
   copiedPresetId,
   onCopyPresetCard,
 }) => {
+  const overlayRef = useRef<View>(null);
+  const insets = useSafeAreaInsets();
+  const { keyboardInset, isKeyboardVisible } = useKeyboardInset({
+    containerRef: overlayRef,
+    subtractSafeAreaBottomOnIOS: false,
+    enabled: visible,
+  });
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.modalOverlay}
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={onClose}
+    >
+      <View
+        ref={overlayRef}
+        collapsable={false}
+        style={[
+          styles.modalOverlay,
+          {
+            paddingTop: Math.max(18, insets.top + 8),
+            paddingBottom: isKeyboardVisible
+              ? keyboardInset + 12
+              : Math.max(18, insets.bottom + 12),
+            justifyContent: isKeyboardVisible ? 'flex-start' : 'center',
+          },
+        ]}
       >
         <Pressable
           style={StyleSheet.absoluteFill}
@@ -59,11 +89,18 @@ export const GaragePresetsModal: React.FC<GaragePresetsModalProps> = ({
 
           <View style={styles.saveRow}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, WEB_INPUT_RESET]}
               placeholder={t('newPresetPlaceholder')}
               placeholderTextColor={THEME.textMuted}
+              cursorColor={THEME.accentBrand}
+              selectionColor={THEME.accentBrand}
               value={presetNameInput}
               onChangeText={onChangePresetName}
+              returnKeyType="done"
+              enterKeyHint="done"
+              maxLength={40}
+              autoCorrect={false}
+              onSubmitEditing={onSavePreset}
             />
             <TouchableOpacity style={styles.saveActionBtn} onPress={onSavePreset}>
               <Text style={styles.saveActionBtnText}>{t('save')}</Text>
@@ -77,8 +114,9 @@ export const GaragePresetsModal: React.FC<GaragePresetsModalProps> = ({
             <FlatList
               data={savedPresets}
               keyExtractor={item => item.id}
-              style={{ maxHeight: 280 }}
+              style={[styles.presetList, !isKeyboardVisible && styles.presetListDefaultMax]}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
               renderItem={({ item }) => {
                 const pInputs = { ...DEFAULT_INPUTS, ...item.inputs };
                 const pPiColor = getPiColor(pInputs.piClass);
@@ -136,7 +174,7 @@ export const GaragePresetsModal: React.FC<GaragePresetsModalProps> = ({
             <Text style={styles.closeBtnText}>{t('close')}</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
@@ -152,6 +190,8 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 500,
+    maxHeight: '100%',
+    flexShrink: 1,
     backgroundColor: THEME.bgCard,
     borderWidth: 1,
     borderColor: THEME.borderStrong,
@@ -177,6 +217,7 @@ const styles = StyleSheet.create({
   saveRow: { flexDirection: 'row', gap: 8 },
   input: {
     flex: 1,
+    minHeight: 42,
     backgroundColor: THEME.bgElevated,
     borderWidth: 1,
     borderColor: THEME.border,
@@ -184,8 +225,16 @@ const styles = StyleSheet.create({
     color: THEME.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    fontSize: 13.5,
+    fontSize: Platform.select({ web: 16, default: 14 }),
+    textAlignVertical: 'center',
+    includeFontPadding: false,
     minWidth: 0,
+  },
+  presetList: {
+    flexShrink: 1,
+  },
+  presetListDefaultMax: {
+    maxHeight: 280,
   },
   saveActionBtn: {
     backgroundColor: THEME.accentBrand,
