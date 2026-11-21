@@ -53,7 +53,11 @@ export function useGaragePresets({ inputs, setInputs, onPresetLoaded }: UseGarag
       p => p.name.toLowerCase() === trimmed.toLowerCase()
     );
 
-    const inputsWithPreset: VehicleInputs = { ...inputs, activePresetName: trimmed };
+    const inputsWithPreset: VehicleInputs = {
+      ...inputs,
+      carName: trimmed,
+      activePresetName: trimmed,
+    };
 
     if (existingIndex >= 0) {
       Alert.alert(
@@ -93,7 +97,12 @@ export function useGaragePresets({ inputs, setInputs, onPresetLoaded }: UseGarag
 
   const handleLoadPreset = useCallback(
     (preset: PresetItem) => {
-      setInputs({ ...DEFAULT_INPUTS, ...preset.inputs, activePresetName: preset.name });
+      setInputs({
+        ...DEFAULT_INPUTS,
+        ...preset.inputs,
+        carName: preset.inputs.carName || preset.name,
+        activePresetName: preset.name,
+      });
       onPresetLoaded?.();
     },
     [onPresetLoaded, setInputs]

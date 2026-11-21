@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Car, Bookmark } from 'lucide-react-native';
+import { Bookmark, Stethoscope } from 'lucide-react-native';
 import { VehicleInputs } from '../../types/tuning';
 import { THEME, getPiColor } from '../../theme';
 import { t } from '../../i18n';
@@ -8,35 +8,45 @@ import { t } from '../../i18n';
 interface ActiveVehicleHeroProps {
   inputs: VehicleInputs;
   ptwVal: number;
-  onChangeCar: () => void;
-  onSaveTune: () => void;
+  onOpenGarage: () => void;
+  onOpenDoctor: () => void;
+  onCyclePiClass: () => void;
 }
 
 export const ActiveVehicleHero: React.FC<ActiveVehicleHeroProps> = ({
   inputs,
   ptwVal,
-  onChangeCar,
-  onSaveTune,
+  onOpenGarage,
+  onOpenDoctor,
+  onCyclePiClass,
 }) => {
   const piBadgeColor = getPiColor(inputs.piClass);
+  const displayName = inputs.activePresetName || inputs.carName || t('customBuild');
+  const showPresetBadge =
+    Boolean(inputs.activePresetName) && inputs.activePresetName !== inputs.carName;
 
   return (
     <View style={styles.heroCard}>
       <View style={styles.heroLeft}>
         <View style={styles.heroKickerRow}>
           <Text style={styles.heroKicker}>{t('activeVehicle')}</Text>
-          {inputs.activePresetName ? (
+          {showPresetBadge ? (
             <View style={styles.heroPresetTag}>
               <Text style={styles.heroPresetTagText}>{inputs.activePresetName}</Text>
             </View>
           ) : null}
         </View>
         <View style={styles.heroTitleRow}>
-          <View style={[styles.heroPiBadge, { backgroundColor: piBadgeColor }]}>
+          <TouchableOpacity
+            style={[styles.heroPiBadge, { backgroundColor: piBadgeColor }]}
+            onPress={onCyclePiClass}
+            accessibilityRole="button"
+            accessibilityLabel="Cycle PI class"
+          >
             <Text style={styles.heroPiBadgeText}>{inputs.piClass || 'A'}</Text>
-          </View>
+          </TouchableOpacity>
           <Text style={styles.heroCarName} numberOfLines={1}>
-            {inputs.carName || t('customBuild')}
+            {displayName}
           </Text>
         </View>
         <View style={styles.heroMetaChips}>
@@ -58,13 +68,13 @@ export const ActiveVehicleHero: React.FC<ActiveVehicleHeroProps> = ({
       </View>
 
       <View style={styles.heroActions}>
-        <TouchableOpacity style={styles.heroActionPrimary} onPress={onChangeCar}>
-          <Car size={13} color="#ffffff" strokeWidth={2.4} />
-          <Text style={styles.heroActionPrimaryText}>{t('changeCar')}</Text>
+        <TouchableOpacity style={styles.heroActionPrimary} onPress={onOpenGarage}>
+          <Bookmark size={13} color="#ffffff" strokeWidth={2.4} />
+          <Text style={styles.heroActionPrimaryText}>{t('garageSave')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.heroActionSecondary} onPress={onSaveTune}>
-          <Bookmark size={13} color={THEME.textPrimary} strokeWidth={2.2} />
-          <Text style={styles.heroActionSecondaryText}>{t('saveTune')}</Text>
+        <TouchableOpacity style={styles.heroActionSecondary} onPress={onOpenDoctor}>
+          <Stethoscope size={13} color={THEME.accentAmber} strokeWidth={2.2} />
+          <Text style={styles.heroActionSecondaryText}>{t('doctor')}</Text>
         </TouchableOpacity>
       </View>
     </View>

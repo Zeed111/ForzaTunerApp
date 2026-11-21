@@ -26,12 +26,13 @@ import { SuspensionLimitsCard } from './src/components/cards/SuspensionLimitsCar
 import { AeroLimitsCard } from './src/components/cards/AeroLimitsCard';
 import { EngineGearingCard } from './src/components/cards/EngineGearingCard';
 import { TuneOutputCard } from './src/components/cards/TuneOutputCard';
-import { CarSelectorModal } from './src/components/modals/CarSelectorModal';
 import { TuneDoctorModal } from './src/components/modals/TuneDoctorModal';
 import { CompanionChecklistModal } from './src/components/modals/CompanionChecklistModal';
 import { GaragePresetsModal } from './src/components/modals/GaragePresetsModal';
 import { THEME } from './src/theme';
 import { t } from './src/i18n';
+
+const PI_CLASSES = ['D', 'C', 'B', 'A', 'S1', 'S2', 'X'] as const;
 
 interface MobileKeyboardChromeProps {
   isWideScreen: boolean;
@@ -99,7 +100,6 @@ function AppContent() {
   const [outputTab, setOutputTab] = useState<OutputTab>('all');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
-  const [carModalVisible, setCarModalVisible] = useState(false);
   const [doctorModalVisible, setDoctorModalVisible] = useState(false);
   const [checklistModalVisible, setChecklistModalVisible] = useState(false);
   const [presetModalVisible, setPresetModalVisible] = useState(false);
@@ -158,6 +158,16 @@ function AppContent() {
     setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const handleCyclePiClass = () => {
+    setInputs(prev => {
+      const currentIdx = PI_CLASSES.indexOf(
+        (prev.piClass?.toUpperCase() || 'A') as (typeof PI_CLASSES)[number]
+      );
+      const nextPi = PI_CLASSES[(currentIdx + 1) % PI_CLASSES.length];
+      return { ...prev, piClass: nextPi };
+    });
+  };
+
   const weightKg = inputs.units === 'imperial' ? inputs.weight / 2.20462 : inputs.weight;
   const ptwVal = Math.round((inputs.hp / Math.max(100, weightKg)) * 1000);
 
@@ -207,7 +217,6 @@ function AppContent() {
                 units={inputs.units}
                 onToggleUnits={toggleUnits}
                 onReset={handleReset}
-                onOpenCars={() => setCarModalVisible(true)}
                 onOpenDoctor={() => setDoctorModalVisible(true)}
                 onOpenChecklist={() => setChecklistModalVisible(true)}
                 onOpenGarage={() => setPresetModalVisible(true)}
@@ -216,8 +225,9 @@ function AppContent() {
               <ActiveVehicleHero
                 inputs={inputs}
                 ptwVal={ptwVal}
-                onChangeCar={() => setCarModalVisible(true)}
-                onSaveTune={() => setPresetModalVisible(true)}
+                onOpenGarage={() => setPresetModalVisible(true)}
+                onOpenDoctor={() => setDoctorModalVisible(true)}
+                onCyclePiClass={handleCyclePiClass}
               />
 
               {!isWideScreen && (
@@ -327,16 +337,6 @@ function AppContent() {
           />
         </FormNavigationProvider>
       </View>
-
-      <CarSelectorModal
-        visible={carModalVisible}
-        onClose={() => setCarModalVisible(false)}
-        onSelectCar={(specs: Partial<VehicleInputs>) => {
-          setInputs(prev => ({ ...prev, ...specs }));
-          setChecklistCheckedIds(new Set());
-        }}
-        units={inputs.units}
-      />
 
       <TuneDoctorModal
         visible={doctorModalVisible}
