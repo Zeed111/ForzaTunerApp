@@ -8,7 +8,7 @@ import {
   VehicleInputs,
 } from '../types/tuning';
 import { calculateTune } from '../engine';
-import { convertInputsUnitSystem, KGF_MM_TO_LB_IN } from '../utils/units';
+import { convertInputsUnitSystem, FORZA_SPRING_TO_LB_IN } from '../utils/units';
 import { t } from '../i18n';
 
 const STORAGE_KEY_STATE = 'fh_tuner_app_state';
@@ -67,17 +67,29 @@ export function useTunerState() {
       const fw = Math.min(0.75, Math.max(0.30, prev.frontWeightPct / 100));
       const rw = 1 - fw;
 
-      const minF_kgf = Math.round(Math.max(40, Math.min(350, wKg * fw * 0.17)));
-      const maxF_kgf = Math.round(Math.max(minF_kgf + 200, Math.min(1300, wKg * fw * 0.92)));
-      const minR_kgf = Math.round(Math.max(40, Math.min(350, wKg * rw * 0.17)));
-      const maxR_kgf = Math.round(Math.max(minR_kgf + 200, Math.min(1300, wKg * rw * 0.92)));
+      const minF_forza = Number(Math.max(15, Math.min(110, wKg * fw * 0.055)).toFixed(1));
+      const maxF_forza = Number(
+        Math.max(minF_forza + 60, Math.min(360, wKg * fw * 0.30)).toFixed(1)
+      );
+      const minR_forza = Number(Math.max(15, Math.min(110, wKg * rw * 0.055)).toFixed(1));
+      const maxR_forza = Number(
+        Math.max(minR_forza + 60, Math.min(360, wKg * rw * 0.30)).toFixed(1)
+      );
 
       return {
         ...prev,
-        springFrontMin: isImpLocal ? Number((minF_kgf * KGF_MM_TO_LB_IN).toFixed(1)) : minF_kgf,
-        springFrontMax: isImpLocal ? Number((maxF_kgf * KGF_MM_TO_LB_IN).toFixed(1)) : maxF_kgf,
-        springRearMin: isImpLocal ? Number((minR_kgf * KGF_MM_TO_LB_IN).toFixed(1)) : minR_kgf,
-        springRearMax: isImpLocal ? Number((maxR_kgf * KGF_MM_TO_LB_IN).toFixed(1)) : maxR_kgf,
+        springFrontMin: isImpLocal
+          ? Number((minF_forza * FORZA_SPRING_TO_LB_IN).toFixed(1))
+          : minF_forza,
+        springFrontMax: isImpLocal
+          ? Number((maxF_forza * FORZA_SPRING_TO_LB_IN).toFixed(1))
+          : maxF_forza,
+        springRearMin: isImpLocal
+          ? Number((minR_forza * FORZA_SPRING_TO_LB_IN).toFixed(1))
+          : minR_forza,
+        springRearMax: isImpLocal
+          ? Number((maxR_forza * FORZA_SPRING_TO_LB_IN).toFixed(1))
+          : maxR_forza,
       };
     });
   }, []);

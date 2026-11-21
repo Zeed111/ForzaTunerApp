@@ -29,7 +29,7 @@ export function formatShareableTuneCard(inputs: VehicleInputs, tune: TuneResult)
     `   • Rebound (F / R): ${tune.rebFront} / ${tune.rebRear}`,
     `   • Bump (F / R):    ${tune.bmpFront} / ${tune.bmpRear}`,
     `7. AERO DOWNFORCE (F / R): ${tune.aeroFront} / ${tune.aeroRear}`,
-    `8. BRAKES: Balance ${tune.brakeBalance} | Pressure ${tune.brakePressure}`,
+    `8. BRAKES: Balance ${tune.brakeBalance}${tune.brakeBalanceNote ? ` (${tune.brakeBalanceNote})` : ''} | Pressure ${tune.brakePressure}`,
     `9. DIFFERENTIAL:`,
   ];
 

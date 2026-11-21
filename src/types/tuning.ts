@@ -1,5 +1,5 @@
 export type UnitSystem = 'metric' | 'imperial';
-export type CarCategory = 'jdm' | 'track' | 'classic' | 'supercar';
+export type CarCategory = 'jdm' | 'sports' | 'classic' | 'track' | 'supercar' | 'offroad';
 export type Discipline = 'drift' | 'grip' | 'dirt' | 'offroad' | 'drag';
 export type Drivetrain = 'RWD' | 'AWD' | 'FWD';
 export type EngineType = 'balanced' | 'highrev' | 'torque' | 'ev';
@@ -22,6 +22,9 @@ export interface TuneDoctorOffsets {
   casterDegDelta?: number;
   bumpDeltaF?: number;
   bumpDeltaR?: number;
+  heightRatioDelta?: number;
+  aeroFrontRatioDelta?: number;
+  diffFrontAccDelta?: number;
   diffRearAccDelta?: number;
   finalDriveDelta?: number;
 }
@@ -122,6 +125,7 @@ export interface TuneResult {
   aeroFront: string;
   aeroRear: string;
   brakeBalance: string;
+  brakeBalanceNote?: string;
   brakePressure: string;
   diffFront?: string;
   diffRear?: string;
@@ -166,10 +170,10 @@ export const DEFAULT_INPUTS: VehicleInputs = {
   tWidthR: 275,
   tProfileR: 35,
   tRimR: 18,
-  springFrontMin: 120,
-  springFrontMax: 650,
-  springRearMin: 120,
-  springRearMax: 650,
+  springFrontMin: 35,
+  springFrontMax: 210,
+  springRearMin: 35,
+  springRearMax: 210,
   heightFrontMin: 9.0,
   heightFrontMax: 18.0,
   heightRearMin: 9.0,

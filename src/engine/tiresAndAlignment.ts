@@ -6,12 +6,12 @@ export function clamp(val: number, min: number, max: number): number {
 }
 
 export function formatToe(val: number): string {
-  if (Math.abs(val) < 0.005) return '0.00°';
-  // In Forza Horizon: Negative (-) is Toe-Out, Positive (+) is Toe-In
-  if (val < 0) {
-    return `${val.toFixed(2)}° (Out)`;
+  const stepped = Math.round(val * 10) / 10;
+  if (Math.abs(stepped) < 0.05) return '0.0°';
+  if (stepped < 0) {
+    return `${Math.abs(stepped).toFixed(1)}° Out`;
   }
-  return `+${val.toFixed(2)}° (In)`;
+  return `${stepped.toFixed(1)}° In`;
 }
 
 export interface TiresAndAlignmentResult {
@@ -43,12 +43,12 @@ export function calculateTiresAndAlignment(
   doc: TuneDoctorOffsets
 ): TiresAndAlignmentResult {
   // 1. Tire Kinematics & Stagger
-  const widthF = clamp(car.tWidthF || 245, 135, 405);
-  const profileF = clamp(car.tProfileF || 40, 20, 85);
+  const widthF = clamp(car.tWidthF || 245, 125, 455);
+  const profileF = clamp(car.tProfileF || 40, 15, 85);
   const rimF = clamp(car.tRimF || 18, 12, 26);
 
-  const widthR = clamp(car.tWidthR || 275, 135, 405);
-  const profileR = clamp(car.tProfileR || 35, 20, 85);
+  const widthR = clamp(car.tWidthR || 275, 125, 455);
+  const profileR = clamp(car.tProfileR || 35, 15, 85);
   const rimR = clamp(car.tRimR || 18, 12, 26);
 
   const tireDiameterMF = Math.max(0.35, (2 * (widthF * (profileF / 100)) + rimF * 25.4) / 1000);
@@ -169,10 +169,10 @@ export function calculateTiresAndAlignment(
 
   if (car.discipline === 'drift') {
     // Front: heavy negative camber for steering angle, rear: near-zero camber for acceleration while sideways
-    cF = clamp(-4.4 - (fw - 0.5) * 1.6 - profileModF - massRollMod * 0.5, -5.5, -3.8);
+    cF = clamp(-4.4 - (fw - 0.5) * 1.4 - profileModF - massRollMod * 0.5, -5.0, -3.5);
     cR = clamp(-0.4 - (rw - 0.5) * 0.8 - (powerToWeightTon > 380 ? 0.2 : 0), -1.2, -0.2);
     // In Forza: Negative is Toe-Out (sharp turn-in and angle hold)
-    toeF = clamp(-0.55 - (fw - 0.5) * 0.8 - (safeHp > 600 ? 0.15 : 0), -1.2, -0.3);
+    toeF = clamp(-0.5 - (fw - 0.5) * 0.8 - (safeHp > 600 ? 0.2 : 0), -1.2, -0.3);
     // Rear: slight Toe-In for high-speed control or neutral
     toeR = clamp((rw - 0.5) * 0.4, 0.0, 0.2);
     caster = clamp(6.8 + (fw - 0.5) * 0.8, 6.5, 7.0);
@@ -186,21 +186,23 @@ export function calculateTiresAndAlignment(
   } else if (car.discipline === 'dirt') {
     cF = clamp(-1.2 - (fw - 0.5) * 0.8 - profileModF, -1.8, -0.9);
     cR = clamp(-0.8 - (rw - 0.5) * 0.6 - profileModR, -1.3, -0.5);
-    toeF = -0.10; // slight Toe-Out
-    toeR = 0.10;  // slight Toe-In for high-speed stability
+    toeF = -0.1; // slight Toe-Out
+    toeR = 0.1;  // slight Toe-In for high-speed stability
     caster = 6.5;
   } else {
-    // Grip / Track / JDM / Classic / Supercar
+    // Grip / Track / Sports / JDM / Classic / Supercar / Offroad
     let baseCamberF = -1.9, baseCamberR = -1.3, baseCaster = 6.3;
     if (car.category === 'track') { baseCamberF = -2.4; baseCamberR = -1.7; baseCaster = 6.7; }
     else if (car.category === 'jdm') { baseCamberF = -2.0; baseCamberR = -1.4; baseCaster = 6.3; }
+    else if (car.category === 'sports') { baseCamberF = -1.9; baseCamberR = -1.3; baseCaster = 6.3; }
     else if (car.category === 'classic') { baseCamberF = -1.5; baseCamberR = -0.9; baseCaster = 5.7; }
     else if (car.category === 'supercar') { baseCamberF = -2.2; baseCamberR = -1.8; baseCaster = 6.5; }
+    else if (car.category === 'offroad') { baseCamberF = -1.0; baseCamberR = -0.6; baseCaster = 6.5; }
 
-    cF = clamp(baseCamberF - (fw - 0.5) * 1.4 - profileModF - massRollMod, -3.2, -1.0);
-    cR = clamp(baseCamberR - (rw - 0.5) * 1.1 - profileModR - massRollMod, -2.5, -0.5);
-    toeF = car.category === 'track' ? -0.10 : 0.0;
-    toeR = fw < 0.48 || car.category === 'supercar' ? 0.15 : (fw > 0.56 ? 0.05 : 0.10);
+    cF = clamp(baseCamberF - (fw - 0.5) * 1.4 - profileModF - massRollMod, -3.2, -0.8);
+    cR = clamp(baseCamberR - (rw - 0.5) * 1.1 - profileModR - massRollMod, -2.5, -0.4);
+    toeF = car.category === 'track' ? -0.1 : 0.0;
+    toeR = fw < 0.48 || car.category === 'supercar' ? 0.2 : (fw > 0.56 ? 0.0 : 0.1);
     caster = clamp(baseCaster + (fw - 0.5) * 0.8, 5.2, 7.0);
   }
 
@@ -208,7 +210,7 @@ export function calculateTiresAndAlignment(
   if (bias > 0) {
     // Agile / Oversteer: slight extra front toe-out for immediate bite, slight extra negative camber
     toeF = clamp(toeF - bias * 0.02, -1.2, 0.2);
-    cF = clamp(cF - bias * 0.05, -5.5, -0.8);
+    cF = clamp(cF - bias * 0.05, -5.0, -0.5);
   } else if (bias < 0) {
     // Stable / Understeer: slight extra rear camber for planted traction
     cR = clamp(cR + bias * 0.04, -3.0, -0.2);
@@ -216,7 +218,7 @@ export function calculateTiresAndAlignment(
 
   // Tune Doctor Alignment Offsets
   if (doc.camberDegDeltaF) {
-    cF = clamp(cF + doc.camberDegDeltaF, -5.5, -0.2);
+    cF = clamp(cF + doc.camberDegDeltaF, -5.0, -0.2);
   }
   if (doc.toeDegDeltaF) {
     toeF = clamp(toeF + doc.toeDegDeltaF, -1.2, 0.5);
@@ -224,6 +226,12 @@ export function calculateTiresAndAlignment(
   if (doc.casterDegDelta) {
     caster = clamp(caster + doc.casterDegDelta, 4.5, 7.0);
   }
+
+  // Snap Toe to Forza's 0.1 deg slider step
+  toeF = Math.round(toeF * 10) / 10;
+  toeR = Math.round(toeR * 10) / 10;
+  if (Object.is(toeF, -0)) toeF = 0;
+  if (Object.is(toeR, -0)) toeR = 0;
 
   return {
     driveCircumferenceM,

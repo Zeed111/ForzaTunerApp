@@ -9,6 +9,7 @@ export interface DrivetrainAndGearingResult {
   dCenter: string;
   dCenterPct: number;
   brakeBalance: number;
+  physicalFrontBias: number;
   brakePressure: number;
   calculatedFD: number;
   gearRatios: number[];
@@ -24,6 +25,7 @@ export interface DrivetrainAndGearingResult {
 export function calculateDrivetrainAndGearing(
   car: VehicleInputs,
   isImp: boolean,
+  weightKg: number,
   fw: number,
   rw: number,
   safeHp: number,
@@ -111,33 +113,54 @@ export function calculateDrivetrainAndGearing(
     }
   }
 
+  if (car.drivetrain !== 'RWD' && doc.diffFrontAccDelta) {
+    dFAcc = clamp(dFAcc + doc.diffFrontAccDelta, 5, 100);
+  }
   if (car.drivetrain !== 'FWD' && doc.diffRearAccDelta) {
     dRAcc = clamp(dRAcc + doc.diffRearAccDelta, 5, 100);
   }
 
-  // 7. Brakes
-  const brakeBalance = clamp(Math.round(50 + (fw - 0.5) * 10 + (car.category === 'track' ? 1 : 0)), 47, 55);
+  // 7. Brakes (Forza Horizon brake balance slider is inverted around 50%: lower % biases Front)
+  const physicalFrontBias = clamp(
+    Math.round(50 + (fw - 0.5) * 10 + (car.category === 'track' ? 1 : 0)),
+    47,
+    55
+  );
+  const brakeBalance = 100 - physicalFrontBias;
   const brakePressure = car.discipline === 'drift' ? 130 : car.category === 'track' ? 115 : 100;
 
-  // 8. Transmission Ratios & Aerodynamic Drag Analysis
-  let cdA = 0.72; // default sports coupe / JDM
+  // 8. Transmission Ratios & Aerodynamic Drag + Rolling Resistance Analysis
+  let cdA = 0.72; // default JDM / coupe
   if (car.category === 'supercar') cdA = 0.62;
   else if (car.category === 'track') cdA = 0.82;
   else if (car.category === 'classic') cdA = 0.88;
-  if (car.discipline === 'offroad') cdA = 1.25;
-  else if (car.discipline === 'dirt') cdA = 0.95;
+  else if (car.category === 'sports') cdA = 0.70;
+  else if (car.category === 'offroad') cdA = 1.15;
+  if (car.discipline === 'offroad') cdA = Math.max(cdA, 1.25);
+  else if (car.discipline === 'dirt') cdA = Math.max(cdA, 0.95);
 
-  // Additional aero drag from wing downforce setting
-  if (aeroRMax > 50) {
+  // Additional aero drag from wing downforce setting (unit-normalized to kgf)
+  const aeroRMaxKgf = isImp ? aeroRMax / 2.20462 : aeroRMax;
+  if (aeroRMaxKgf > 50) {
     const aeroDragRatio = (aeroR - aeroRMin) / (aeroRMax - aeroRMin + 1);
     cdA += aeroDragRatio * 0.18;
   }
 
-  // Aerodynamic terminal velocity estimation: P_wheel = 0.5 * rho * CdA * v^3
+  // Aerodynamic + rolling resistance terminal velocity:
+  // P_wheel = 0.5 * rho * CdA * v^3 + Crr * m * g * v
   const drivetrainEff = car.drivetrain === 'AWD' ? 0.82 : 0.85;
   const wheelPowerWatts = safeHp * 745.7 * drivetrainEff;
   const airDensity = 1.225; // kg/m^3 at sea level
-  const vTerminalMs = Math.pow(wheelPowerWatts / (0.5 * airDensity * cdA), 1 / 3);
+  const aeroK = 0.5 * airDensity * cdA;
+  const rollingForce = 0.015 * weightKg * 9.81;
+  let vTerminalMs = Math.pow(wheelPowerWatts / aeroK, 1 / 3);
+  for (let iter = 0; iter < 6; iter++) {
+    const f = aeroK * Math.pow(vTerminalMs, 3) + rollingForce * vTerminalMs - wheelPowerWatts;
+    const df = 3 * aeroK * vTerminalMs * vTerminalMs + rollingForce;
+    if (df > 0) {
+      vTerminalMs = Math.max(5, vTerminalMs - f / df);
+    }
+  }
   const vTerminalKmh = Math.round(vTerminalMs * 3.6);
   // Practical limit allowing for tailwinds, slipstream, and downhill
   const practicalMaxKmh = Math.round(vTerminalKmh * 1.08);
@@ -206,29 +229,77 @@ export function calculateDrivetrainAndGearing(
   let calculatedFD = 3.50;
 
   if (numGears === 1) {
-    gearRatios.push(1.00);
-    calculatedFD = clamp(safeRedline / wheelRpmAtTopSpeed, 2.20, 12.50);
+    const totalRatio = safeRedline / wheelRpmAtTopSpeed;
+    if (totalRatio <= 6.10) {
+      gearRatios.push(1.00);
+      calculatedFD = clamp(totalRatio, 2.20, 6.10);
+    } else {
+      calculatedFD = clamp(Math.min(6.10, Math.sqrt(totalRatio * 2.5)), 2.20, 6.10);
+      const g1Ev = clamp(Number((totalRatio / calculatedFD).toFixed(2)), 0.48, 6.00);
+      gearRatios.push(g1Ev);
+    }
   } else if (numGears === 2) {
     if (isEv) {
-      gearRatios.push(1.85);
-      gearRatios.push(1.00);
-      calculatedFD = clamp(safeRedline / (wheelRpmAtTopSpeed * 1.00), 2.20, 11.00);
+      const totalTop = safeRedline / wheelRpmAtTopSpeed;
+      if (totalTop <= 6.10) {
+        gearRatios.push(1.85);
+        gearRatios.push(1.00);
+        calculatedFD = clamp(totalTop, 2.20, 6.10);
+      } else {
+        calculatedFD = 6.10;
+        const g2Ev = clamp(Number((totalTop / calculatedFD).toFixed(2)), 0.48, 3.20);
+        const g1Ev = clamp(
+          Number((g2Ev * 1.85).toFixed(2)),
+          Number(Math.min(6.00, g2Ev + 0.25).toFixed(2)),
+          6.00
+        );
+        gearRatios.push(g1Ev);
+        gearRatios.push(g2Ev);
+      }
     } else {
-      gearRatios.push(Number((gTop * 1.82).toFixed(2)));
-      gearRatios.push(Number(gTop.toFixed(2)));
-      calculatedFD = clamp(safeRedline / (wheelRpmAtTopSpeed * gTop), 2.20, 5.80);
+      const g2 = clamp(Number(gTop.toFixed(2)), 0.48, 3.20);
+      const g1Ice = clamp(
+        Number((g2 * 1.82).toFixed(2)),
+        Number(Math.min(6.00, g2 + 0.25).toFixed(2)),
+        6.00
+      );
+      gearRatios.push(g1Ice);
+      gearRatios.push(g2);
+      calculatedFD = clamp(safeRedline / (wheelRpmAtTopSpeed * g2), 2.20, 6.10);
     }
   } else {
+    if (numGears >= 8) {
+      gTop *= 0.90;
+      g1 *= 1.06;
+    } else if (numGears <= 4) {
+      gTop *= 1.08;
+      g1 *= 0.90;
+    }
+
+    const clampedG1 = clamp(g1, 1.80, 5.80);
+    const clampedGTop = clamp(gTop, numGears >= 8 ? 0.56 : 0.48, 1.40);
+
     for (let i = 1; i <= numGears; i++) {
       const t = (i - 1) / (numGears - 1);
-      const ratio = Number((g1 * Math.pow(gTop / g1, Math.pow(t, curveExponent))).toFixed(2));
+      let ratio = clamp(
+        Number((clampedG1 * Math.pow(clampedGTop / clampedG1, Math.pow(t, curveExponent))).toFixed(2)),
+        0.48,
+        6.00
+      );
+      if (i > 1 && ratio >= gearRatios[i - 2]) {
+        ratio = Number(Math.max(0.48, gearRatios[i - 2] - 0.04).toFixed(2));
+      }
       gearRatios.push(ratio);
     }
-    calculatedFD = clamp(safeRedline / (wheelRpmAtTopSpeed * gTop), 2.20, 6.20);
+    calculatedFD = clamp(
+      safeRedline / (wheelRpmAtTopSpeed * gearRatios[gearRatios.length - 1]),
+      2.20,
+      6.10
+    );
   }
 
   if (doc.finalDriveDelta) {
-    calculatedFD = clamp(calculatedFD + doc.finalDriveDelta, 2.20, numGears === 1 ? 12.50 : 6.20);
+    calculatedFD = clamp(calculatedFD + doc.finalDriveDelta, 2.20, 6.10);
   }
 
   const estSpeedDisplay = isImp
@@ -254,6 +325,7 @@ export function calculateDrivetrainAndGearing(
     dCenter,
     dCenterPct,
     brakeBalance,
+    physicalFrontBias,
     brakePressure,
     calculatedFD,
     gearRatios,

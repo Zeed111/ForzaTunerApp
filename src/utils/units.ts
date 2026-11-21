@@ -1,7 +1,9 @@
 import { UnitSystem, VehicleInputs } from '../types/tuning';
 
 export const KG_TO_LBS = 2.2046226218;
-export const KGF_MM_TO_LB_IN = 55.99741459;
+// Forza Horizon's in-game metric spring readout (labeled kgf/mm) uses kgf/cm-scale numbers
+// (~10x numerically larger than SI kgf/mm): 100.0 Forza metric ≈ 560.0 lb/in Imperial.
+export const FORZA_SPRING_TO_LB_IN = 5.599741459;
 export const CM_TO_IN = 1 / 2.54;
 export const KMH_TO_MPH = 1 / 1.609344;
 
@@ -47,17 +49,17 @@ export function convertInputsUnitSystem(
       ? Math.round(current.weight * KG_TO_LBS)
       : Math.round(current.weight / KG_TO_LBS),
     springFrontMin: toImperial
-      ? Number((current.springFrontMin * KGF_MM_TO_LB_IN).toFixed(1))
-      : Number((current.springFrontMin / KGF_MM_TO_LB_IN).toFixed(1)),
+      ? Number((current.springFrontMin * FORZA_SPRING_TO_LB_IN).toFixed(1))
+      : Number((current.springFrontMin / FORZA_SPRING_TO_LB_IN).toFixed(1)),
     springFrontMax: toImperial
-      ? Number((current.springFrontMax * KGF_MM_TO_LB_IN).toFixed(1))
-      : Number((current.springFrontMax / KGF_MM_TO_LB_IN).toFixed(1)),
+      ? Number((current.springFrontMax * FORZA_SPRING_TO_LB_IN).toFixed(1))
+      : Number((current.springFrontMax / FORZA_SPRING_TO_LB_IN).toFixed(1)),
     springRearMin: toImperial
-      ? Number((current.springRearMin * KGF_MM_TO_LB_IN).toFixed(1))
-      : Number((current.springRearMin / KGF_MM_TO_LB_IN).toFixed(1)),
+      ? Number((current.springRearMin * FORZA_SPRING_TO_LB_IN).toFixed(1))
+      : Number((current.springRearMin / FORZA_SPRING_TO_LB_IN).toFixed(1)),
     springRearMax: toImperial
-      ? Number((current.springRearMax * KGF_MM_TO_LB_IN).toFixed(1))
-      : Number((current.springRearMax / KGF_MM_TO_LB_IN).toFixed(1)),
+      ? Number((current.springRearMax * FORZA_SPRING_TO_LB_IN).toFixed(1))
+      : Number((current.springRearMax / FORZA_SPRING_TO_LB_IN).toFixed(1)),
     heightFrontMin: toImperial
       ? Number((current.heightFrontMin * CM_TO_IN).toFixed(1))
       : Number((current.heightFrontMin / CM_TO_IN).toFixed(1)),
@@ -85,35 +87,5 @@ export function convertInputsUnitSystem(
     topSpeed: toImperial
       ? Math.round(current.topSpeed * KMH_TO_MPH)
       : Math.round(current.topSpeed / KMH_TO_MPH),
-  };
-}
-
-/**
- * Converts a car's base specs (stored in metric in database) to match the active unit system.
- */
-export function convertPredefinedSpecsToUnits(
-  specs: Omit<VehicleInputs, 'units' | 'discipline'>,
-  targetUnits: UnitSystem
-): Omit<VehicleInputs, 'units' | 'discipline'> {
-  if (targetUnits === 'metric') {
-    return { ...specs };
-  }
-
-  return {
-    ...specs,
-    weight: Math.round(specs.weight * KG_TO_LBS),
-    springFrontMin: Number((specs.springFrontMin * KGF_MM_TO_LB_IN).toFixed(1)),
-    springFrontMax: Number((specs.springFrontMax * KGF_MM_TO_LB_IN).toFixed(1)),
-    springRearMin: Number((specs.springRearMin * KGF_MM_TO_LB_IN).toFixed(1)),
-    springRearMax: Number((specs.springRearMax * KGF_MM_TO_LB_IN).toFixed(1)),
-    heightFrontMin: Number((specs.heightFrontMin * CM_TO_IN).toFixed(1)),
-    heightFrontMax: Number((specs.heightFrontMax * CM_TO_IN).toFixed(1)),
-    heightRearMin: Number((specs.heightRearMin * CM_TO_IN).toFixed(1)),
-    heightRearMax: Number((specs.heightRearMax * CM_TO_IN).toFixed(1)),
-    aeroFrontMin: Math.round(specs.aeroFrontMin * KG_TO_LBS),
-    aeroFrontMax: Math.round(specs.aeroFrontMax * KG_TO_LBS),
-    aeroRearMin: Math.round(specs.aeroRearMin * KG_TO_LBS),
-    aeroRearMax: Math.round(specs.aeroRearMax * KG_TO_LBS),
-    topSpeed: Math.round(specs.topSpeed * KMH_TO_MPH),
   };
 }

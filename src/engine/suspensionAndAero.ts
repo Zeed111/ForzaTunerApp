@@ -49,30 +49,38 @@ export function calculateSuspensionAndAero(
   const aeroRMin = car.aeroRearMin || 0;
   const aeroRMax = Math.max(aeroRMin, car.aeroRearMax || 250);
 
-  let aeroF = aeroFMin;
-  let aeroR = aeroRMin;
+  let aeroRatioF = 0;
+  let aeroRatioR = 0;
 
   if (car.discipline === 'offroad' || car.discipline === 'dirt') {
-    aeroF = aeroFMin + (aeroFMax - aeroFMin) * 0.35;
-    aeroR = aeroRMin + (aeroRMax - aeroRMin) * 0.40;
+    aeroRatioF = 0.35;
+    aeroRatioR = 0.40;
   } else if (car.discipline === 'drift') {
-    aeroF = aeroFMin + (aeroFMax - aeroFMin) * clamp(0.20 + hpFactor * 0.25, 0.15, 0.60);
-    aeroR = aeroRMin + (aeroRMax - aeroRMin) * clamp(0.25 + hpFactor * 0.30, 0.20, 0.70);
+    aeroRatioF = clamp(0.20 + hpFactor * 0.25, 0.15, 0.60);
+    aeroRatioR = clamp(0.25 + hpFactor * 0.30, 0.20, 0.70);
   } else if (car.discipline === 'drag') {
-    aeroF = aeroFMin;
-    aeroR = aeroRMin;
+    aeroRatioF = 0;
+    aeroRatioR = 0;
   } else {
     // Grip
-    const baseGrip = car.category === 'track' ? 0.85 : 0.60;
-    aeroF = aeroFMin + (aeroFMax - aeroFMin) * clamp(baseGrip * (fw / 0.5), 0.15, 0.95);
-    aeroR = aeroRMin + (aeroRMax - aeroRMin) * clamp(baseGrip * (rw / 0.5) * 1.08, 0.15, 0.95);
+    const baseGrip =
+      car.category === 'track' ? 0.85 : car.category === 'offroad' ? 0.35 : 0.60;
+    aeroRatioF = clamp(baseGrip * (fw / 0.5), 0.15, 0.95);
+    aeroRatioR = clamp(baseGrip * (rw / 0.5) * 1.08, 0.15, 0.95);
   }
 
+  if (doc.aeroFrontRatioDelta) {
+    aeroRatioF = clamp(aeroRatioF + doc.aeroFrontRatioDelta, 0, 1);
+  }
+
+  const aeroF = aeroFMin + (aeroFMax - aeroFMin) * aeroRatioF;
+  const aeroR = aeroRMin + (aeroRMax - aeroRMin) * aeroRatioR;
+
   // 5. Springs with Dynamic Aero Downforce Compensation
-  const spFMin = car.springFrontMin || 100;
-  const spFMax = Math.max(spFMin + 1, car.springFrontMax || 600);
-  const spRMin = car.springRearMin || 100;
-  const spRMax = Math.max(spRMin + 1, car.springRearMax || 600);
+  const spFMin = car.springFrontMin || 35;
+  const spFMax = Math.max(spFMin + 1, car.springFrontMax || 210);
+  const spRMin = car.springRearMin || 35;
+  const spRMax = Math.max(spRMin + 1, car.springRearMax || 210);
 
   const rangeSpF = spFMax - spFMin;
   const rangeSpR = spRMax - spRMin;
@@ -95,8 +103,9 @@ export function calculateSuspensionAndAero(
     springRatioF = clamp(fw + 0.04 + aeroSpringBoostF, 0.25, 0.88);
     springRatioR = clamp(rw - 0.06 + aeroSpringBoostR, 0.15, 0.82);
   } else if (car.discipline === 'drag') {
-    springRatioF = 0.85;
-    springRatioR = 0.15;
+    // Drag: Soft front promotes weight transfer / nose lift; mid rear prevents bottoming
+    springRatioF = 0.25;
+    springRatioR = 0.45;
   } else if (car.discipline === 'offroad') {
     springRatioF = clamp(fw * 0.75 + aeroSpringBoostF, 0.25, 0.65);
     springRatioR = clamp(rw * 0.75 + aeroSpringBoostR, 0.25, 0.65);
@@ -111,7 +120,7 @@ export function calculateSuspensionAndAero(
   const spF = spFMin + rangeSpF * springRatioF;
   const spR = spRMin + rangeSpR * springRatioR;
 
-  // Anti-Roll Bars (ARBs): Scale with total vehicle weight, tire stagger, and handling balance bias
+  // Anti-Roll Bars (ARBs): Scale with total vehicle weight, drivetrain, tire stagger, and bias
   const weightArbScale = clamp(weightKg / 1380, 0.70, 1.45);
   const baseArbF = ((65 - 1) * fw + 1) * weightArbScale;
   let baseArbR = ((65 - 1) * rw + 1) * weightArbScale;
@@ -135,9 +144,23 @@ export function calculateSuspensionAndAero(
     arbF = clamp(baseArbF * 0.50, 8, 32);
     arbR = clamp(baseArbR * 0.50, 8, 32);
   } else {
-    // Grip
-    arbF = clamp(baseArbF, 12, 60);
-    arbR = clamp(baseArbR, 12, 60);
+    // Grip: drivetrain-aware ARB balance (softer front / stiffer rear for AWD & FWD rotation)
+    if (car.drivetrain === 'AWD') {
+      arbF = clamp(baseArbF * 0.78, 8, 52);
+      arbR = clamp(baseArbR * 1.18, 16, 62);
+      if (arbF >= arbR) {
+        arbR = clamp(arbF + 3.0, 1, 65);
+      }
+    } else if (car.drivetrain === 'FWD') {
+      arbF = clamp(baseArbF * 0.72, 8, 48);
+      arbR = clamp(baseArbR * 1.25, 18, 63);
+      if (arbF >= arbR) {
+        arbR = clamp(arbF + 3.0, 1, 65);
+      }
+    } else {
+      arbF = clamp(baseArbF * 0.96, 12, 58);
+      arbR = clamp(baseArbR * 0.94, 12, 58);
+    }
   }
 
   // Handling Balance Bias roll stiffness redistribution:
@@ -162,9 +185,9 @@ export function calculateSuspensionAndAero(
 
   if (car.discipline === 'drag') {
     rebF_val = 3.0;
-    rebR_val = 19.0;
-    bmpF_val = 16.0;
-    bmpR_val = 3.5;
+    rebR_val = 16.0;
+    bmpF_val = 14.0;
+    bmpR_val = 4.0;
   } else if (car.discipline === 'drift') {
     rebF_val = clamp(10.8 + massDampModF + (springRatioF - 0.5) * 3.0, 6.0, 18.0);
     rebR_val = clamp(8.4 + massDampModR + (springRatioR - 0.5) * 2.5, 4.5, 15.0);
@@ -182,7 +205,14 @@ export function calculateSuspensionAndAero(
     bmpR_val = clamp(rebR_val * bumpFactor, 2.0, 7.0);
   } else {
     // Grip
-    const catBase = car.category === 'track' ? 11.2 : car.category === 'supercar' ? 10.8 : 9.6;
+    const catBase =
+      car.category === 'track'
+        ? 11.2
+        : car.category === 'supercar'
+        ? 10.8
+        : car.category === 'offroad'
+        ? 7.5
+        : 9.6;
     rebF_val = clamp(catBase + massDampModF + (springRatioF - 0.5) * 3.5, 5.0, 18.0);
     rebR_val = clamp(catBase + massDampModR + (springRatioR - 0.5) * 3.5, 5.0, 18.0);
     bmpF_val = clamp(rebF_val * bumpFactor, 2.5, 11.5);
@@ -221,11 +251,17 @@ export function calculateSuspensionAndAero(
     hRatioF = 0.12;
     hRatioR = 0.18; // Slight rear rake for weight shift
   } else if (car.discipline === 'drag') {
-    hRatioF = 0.05;
-    hRatioR = 0.60;
+    // Drag: higher front gives nose-lift clearance and rear squat preload
+    hRatioF = 0.70;
+    hRatioR = 0.35;
   } else {
-    hRatioF = car.category === 'track' ? 0.08 : 0.15;
-    hRatioR = car.category === 'track' ? 0.12 : 0.18;
+    hRatioF = car.category === 'track' ? 0.08 : car.category === 'offroad' ? 0.55 : 0.15;
+    hRatioR = car.category === 'track' ? 0.12 : car.category === 'offroad' ? 0.55 : 0.18;
+  }
+
+  if (doc.heightRatioDelta) {
+    hRatioF = clamp(hRatioF + doc.heightRatioDelta, 0, 1);
+    hRatioR = clamp(hRatioR + doc.heightRatioDelta, 0, 1);
   }
 
   const hF = hFMin + (hFMax - hFMin) * hRatioF;

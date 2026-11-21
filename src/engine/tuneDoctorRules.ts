@@ -119,26 +119,27 @@ export const SYMPTOMS: SymptomItem[] = [
     descKey: 'descCurbInstability',
     diagnosisKey: 'diagnosiscurb_instability',
     prescriptions: [
-      'Raise Front & Rear Ride Height bounds by +0.5 cm (+0.2 in)',
+      'Raise Ride Height target (+12% slider travel)',
       'Soften Front & Rear Bump Damping (-1.2) to absorb curb strikes smoothly',
     ],
     apply: prev => {
-      const delta = prev.units === 'imperial' ? 0.2 : 0.5;
       const prevOff = prev.doctorOffsets || {};
+      const nextHeightRatio = Number(
+        Math.min(0.50, (prevOff.heightRatioDelta || 0) + 0.12).toFixed(2)
+      );
       const nextBmpF = Number(Math.max(-5.0, (prevOff.bumpDeltaF || 0) - 1.2).toFixed(1));
       const nextBmpR = Number(Math.max(-5.0, (prevOff.bumpDeltaR || 0) - 1.2).toFixed(1));
       return {
         updated: {
           ...prev,
-          heightFrontMin: Math.min(prev.heightFrontMax, Number((prev.heightFrontMin + delta).toFixed(1))),
-          heightRearMin: Math.min(prev.heightRearMax, Number((prev.heightRearMin + delta).toFixed(1))),
           doctorOffsets: {
             ...prevOff,
+            heightRatioDelta: nextHeightRatio,
             bumpDeltaF: nextBmpF,
             bumpDeltaR: nextBmpR,
           },
         },
-        msg: `Raised Ride Height bounds +${delta} ${prev.units === 'imperial' ? 'in' : 'cm'} and softened Bump Damping -1.2.`,
+        msg: 'Raised Ride Height target (+12% travel) and softened Bump Damping -1.2.',
       };
     },
   },
@@ -150,26 +151,40 @@ export const SYMPTOMS: SymptomItem[] = [
     descKey: 'descLaunchWheelspin',
     diagnosisKey: 'diagnosislaunch_wheelspin',
     prescriptions: [
-      'Increase Rear Tire Width (+10 mm)',
-      'Lower Rear Tire pressure (-1.5 PSI / -0.10 bar) to maximize launch bite',
-      'Lengthen Final Drive ratio by -0.10 to reduce 1st gear torque spike',
+      'Lower driven axle Tire pressure (-1.5 PSI / -0.10 bar) to maximize launch bite',
+      'Reduce driven differential accel lock (-8% on FWD) & lengthen Final Drive (-0.10)',
     ],
     apply: prev => {
-      const newWidth = Math.min(415, prev.tWidthR + 10);
       const prevOff = prev.doctorOffsets || {};
-      const nextTireR = Number(Math.max(-0.45, (prevOff.tireBarDeltaR || 0) - 0.10).toFixed(2));
       const nextFd = Number(Math.max(-0.60, (prevOff.finalDriveDelta || 0) - 0.10).toFixed(2));
+      if (prev.drivetrain === 'FWD') {
+        const nextTireF = Number(Math.max(-0.45, (prevOff.tireBarDeltaF || 0) - 0.10).toFixed(2));
+        const nextDiffF = Math.max(-35, (prevOff.diffFrontAccDelta || 0) - 8);
+        return {
+          updated: {
+            ...prev,
+            doctorOffsets: {
+              ...prevOff,
+              tireBarDeltaF: nextTireF,
+              diffFrontAccDelta: nextDiffF,
+              finalDriveDelta: nextFd,
+            },
+          },
+          msg: 'Dropped Front Tire -0.10 bar, reduced Front Diff Accel -8%, and lengthened Final Drive -0.10.',
+        };
+      }
+
+      const nextTireR = Number(Math.max(-0.45, (prevOff.tireBarDeltaR || 0) - 0.10).toFixed(2));
       return {
         updated: {
           ...prev,
-          tWidthR: newWidth,
           doctorOffsets: {
             ...prevOff,
             tireBarDeltaR: nextTireR,
             finalDriveDelta: nextFd,
           },
         },
-        msg: `Increased Rear Tire to ${newWidth} mm, dropped Rear Pressure -0.10 bar, and lengthened Final Drive -0.10.`,
+        msg: 'Dropped Rear Tire -0.10 bar and lengthened Final Drive -0.10.',
       };
     },
   },
@@ -181,25 +196,27 @@ export const SYMPTOMS: SymptomItem[] = [
     descKey: 'descHighSpeedWander',
     diagnosisKey: 'diagnosishigh_speed_wander',
     prescriptions: [
-      'Increase Front Aero Downforce slider to pin the front end down',
-      'Reset Front Toe offset (0.00°) for straight-line tracking',
+      'Increase Front Aero Downforce target (+15% slider range) to pin the front end down',
+      'Reset Front Toe offset (0.0°) for straight-line tracking',
       'Increase Caster Angle (+0.5°) for straight-line self-centering',
     ],
     apply: prev => {
-      const newAeroF = Math.min(prev.aeroFrontMax, prev.aeroFrontMin + 15);
       const prevOff = prev.doctorOffsets || {};
+      const nextAeroFrontRatio = Number(
+        Math.min(0.60, (prevOff.aeroFrontRatioDelta || 0) + 0.15).toFixed(2)
+      );
       const nextCaster = Number(Math.min(1.5, (prevOff.casterDegDelta || 0) + 0.5).toFixed(1));
       return {
         updated: {
           ...prev,
-          aeroFrontMin: newAeroF,
           doctorOffsets: {
             ...prevOff,
+            aeroFrontRatioDelta: nextAeroFrontRatio,
             toeDegDeltaF: 0,
             casterDegDelta: nextCaster,
           },
         },
-        msg: `Increased Front Aero min to ${newAeroF} ${prev.units === 'imperial' ? 'lbf' : 'kgf'}, zeroed Toe tweak, and added +0.5° Caster.`,
+        msg: 'Increased Front Aero target (+15% range), zeroed Toe tweak, and added +0.5° Caster.',
       };
     },
   },
@@ -264,6 +281,11 @@ export function computeTuneDoctorDiff(
       label: 'Aero Downforce (F / R)',
       before: `${beforeTune.aeroFront} / ${beforeTune.aeroRear}`,
       after: `${afterTune.aeroFront} / ${afterTune.aeroRear}`,
+    },
+    {
+      label: 'Front Diff (Acc / Dec)',
+      before: beforeTune.diffFront || 'N/A',
+      after: afterTune.diffFront || 'N/A',
     },
     {
       label: 'Rear Diff (Acc / Dec)',

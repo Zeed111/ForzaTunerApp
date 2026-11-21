@@ -4,7 +4,6 @@ import { calculateSuspensionAndAero } from './suspensionAndAero';
 import { calculateDrivetrainAndGearing } from './drivetrainAndGearing';
 
 export * from '../types/tuning';
-export { formatShareableTuneCard } from '../utils/shareTuneCard';
 
 export function calculateTune(car: VehicleInputs): TuneResult {
   const isImp = car.units === 'imperial';
@@ -52,6 +51,7 @@ export function calculateTune(car: VehicleInputs): TuneResult {
   const driveGearing = calculateDrivetrainAndGearing(
     car,
     isImp,
+    weightKg,
     fw,
     rw,
     safeHp,
@@ -68,8 +68,8 @@ export function calculateTune(car: VehicleInputs): TuneResult {
   const raw: TuneRawMetrics = {
     tireFrontRatio: clamp((tiresAlign.coldBarF - 1.0) / 2.8, 0, 1),
     tireRearRatio: clamp((tiresAlign.coldBarR - 1.0) / 2.8, 0, 1),
-    camberFrontRatio: clamp(Math.abs(tiresAlign.cF) / 5.5, 0, 1),
-    camberRearRatio: clamp(Math.abs(tiresAlign.cR) / 5.5, 0, 1),
+    camberFrontRatio: clamp(Math.abs(tiresAlign.cF) / 5.0, 0, 1),
+    camberRearRatio: clamp(Math.abs(tiresAlign.cR) / 5.0, 0, 1),
     toeFrontDeg: Number(tiresAlign.toeF.toFixed(2)),
     toeRearDeg: Number(tiresAlign.toeR.toFixed(2)),
     casterRatio: clamp((tiresAlign.caster - 1.0) / 6.0, 0, 1),
@@ -169,7 +169,8 @@ export function calculateTune(car: VehicleInputs): TuneResult {
     aeroRear: isImp
       ? `${Math.round(suspAero.aeroR)} lbf`
       : `${Math.round(suspAero.aeroR)} kgf`,
-    brakeBalance: `${driveGearing.brakeBalance}% (Front)`,
+    brakeBalance: `${driveGearing.brakeBalance}% (Forza Slider)`,
+    brakeBalanceNote: `${driveGearing.physicalFrontBias}% Front Physics • FH Slider Inverted`,
     brakePressure: `${driveGearing.brakePressure}%`,
     diffFront:
       car.drivetrain !== 'RWD'
